@@ -21,7 +21,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	//	"github.com/davecgh/go-spew/spew"
+	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/net/context"
 	"log"
 	"math"
@@ -249,6 +249,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	new_mors := []types.ManagedObjectReference{}
 
+	spew.Dump(mors)
 	// Assign each MORS type to a specific array
 	for _, mor := range mors {
 		if mor.Type == "VirtualMachine" {
