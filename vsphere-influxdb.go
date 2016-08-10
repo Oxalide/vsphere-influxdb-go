@@ -19,7 +19,9 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
+	//	"github.com/davecgh/go-spew/spew"
 	"golang.org/x/net/context"
 	"log"
 	"math"
@@ -78,6 +80,7 @@ type MetricDef struct {
 
 // Metrics description in config
 var vm_refs []types.ManagedObjectReference
+var debug bool
 
 type Metric struct {
 	ObjectType []string
@@ -284,6 +287,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	// Retrieve properties for clusters, if any
 	if len(cluster_refs) > 0 {
+		if debug == true {
+			stdlog.Println("going inside clusters")
+		}
 		var clmo []mo.ClusterComputeResource
 		err = pc.Retrieve(ctx, cluster_refs, []string{"name", "configuration"}, &clmo)
 		if err != nil {
@@ -291,7 +297,17 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			return
 		}
 		for _, cl := range clmo {
+			if debug == true {
+				stdlog.Println("---cluster name - you should see every cluster here---")
+				stdlog.Println(cl.Name)
+			}
+
 			for _, vm := range cl.Configuration.DasVmConfig {
+				if debug == true {
+					stdlog.Println("--VM ID - you should see every VM ID here--")
+					stdlog.Println(vm.Key.Value)
+				}
+
 				vmToCluster[vm.Key] = cl.Name
 			}
 		}
@@ -591,6 +607,10 @@ func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxcl
 }
 
 func main() {
+
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	flag.Parse()
+
 	stdlog = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	errlog = log.New(os.Stderr, "", log.Ldate|log.Ltime)
 
