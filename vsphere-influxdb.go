@@ -301,8 +301,11 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			if debug == true {
 				stdlog.Println("---cluster name - you should see every cluster here---")
 				stdlog.Println(cl.Name)
+				stdlog.Println("You should see the cluster object, clsuter configuration object, and cluster configuration dasvmconfig which should contain all VMs")
+				spew.Dump(cl)
+				spew.Dump(cl.Configuration)
+				spew.Dump(cl.Configuration.DasVmConfig)
 			}
-
 			for _, vm := range cl.Configuration.DasVmConfig {
 				if debug == true {
 					stdlog.Println("--VM ID - you should see every VM ID here--")
