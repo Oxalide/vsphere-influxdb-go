@@ -131,12 +131,12 @@ func (vcenter *VCenter) Init(config Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	client, err := vcenter.Connect()
-	defer client.Logout(ctx)
 	if err != nil {
 		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
 		errlog.Println("Error: ", err)
 		return
 	}
+	defer client.Logout(ctx)
 	var perfmanager mo.PerformanceManager
 	err = client.RetrieveOne(ctx, *client.ServiceContent.PerfManager, nil, &perfmanager)
 	if err != nil {
@@ -182,12 +182,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	// Get the client
 	client, err := vcenter.Connect()
-	defer client.Logout(ctx)
 	if err != nil {
 		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
 		errlog.Println("Error: ", err)
 		return
 	}
+	defer client.Logout(ctx)
 
 	// Create the view manager
 	var viewManager mo.ViewManager
