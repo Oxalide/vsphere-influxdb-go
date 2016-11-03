@@ -8,7 +8,7 @@
 You'll need to go get them both for the script to work:
 ```
 go get github.com/vmware/govmomi
-go get github.com/influxdata/influxdb/tree/master/client/v2
+go get github.com/influxdata/influxdb/client/v2
 
 ```
 
