@@ -411,7 +411,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				}
 			}
 		}
-		queries = append(queries, types.PerfQuerySpec{Entity: mor, StartTime: &startTime, EndTime: &endTime, MetricId: metricIds, intervalID: intervalID})
+		queries = append(queries, types.PerfQuerySpec{Entity: mor, StartTime: &startTime, EndTime: &endTime, MetricId: metricIds, IntervalId: intervalID})
 	}
 
 	// Query the performances
@@ -584,7 +584,7 @@ func max(n ...int64) int64 {
 }
 
 func sum(n ...int64) int64 {
-	var total int64 = 0
+	var total int64
 	for _, i := range n {
 		if i > 0 {
 			total += i
@@ -594,12 +594,12 @@ func sum(n ...int64) int64 {
 }
 
 func average(n ...int64) int64 {
-	var total int64 = 0
-	var count int64 = 0
+	var total int64
+	var count int64
 	for _, i := range n {
 		if i >= 0 {
-			count += 1
-			total += i
+			count++
+			total++
 		}
 	}
 	favg := float64(total) / float64(count)
