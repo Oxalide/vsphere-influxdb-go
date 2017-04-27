@@ -80,7 +80,7 @@ type MetricDef struct {
 }
 
 // Metrics description in config
-var vm_refs []types.ManagedObjectReference
+var vmRefs []types.ManagedObjectReference
 var debug bool
 
 type Metric struct {
@@ -244,33 +244,33 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		mors = append(mors, containerView.View...)
 	}
 	// Create MORS for each object type
-	vm_refs := []types.ManagedObjectReference{}
-	host_refs := []types.ManagedObjectReference{}
-	cluster_refs := []types.ManagedObjectReference{}
+	vmRefs := []types.ManagedObjectReference{}
+	hostRefs := []types.ManagedObjectReference{}
+	clusterRefs := []types.ManagedObjectReference{}
 
-	new_mors := []types.ManagedObjectReference{}
+	newMors := []types.ManagedObjectReference{}
 
 	spew.Dump(mors)
 	// Assign each MORS type to a specific array
 	for _, mor := range mors {
 		if mor.Type == "VirtualMachine" {
-			vm_refs = append(vm_refs, mor)
-			new_mors = append(new_mors, mor)
+			vmRefs = append(vmRefs, mor)
+			newMors = append(newMors, mor)
 		} else if mor.Type == "HostSystem" {
-			host_refs = append(host_refs, mor)
-			new_mors = append(new_mors, mor)
+			hostRefs = append(hostRefs, mor)
+			newMors = append(newMors, mor)
 		} else if mor.Type == "ClusterComputeResource" {
-			cluster_refs = append(cluster_refs, mor)
+			clusterRefs = append(clusterRefs, mor)
 		}
 	}
 	// Copy  the mors without the clusters
-	mors = new_mors
+	mors = newMors
 
 	pc := property.DefaultCollector(client.Client)
 
 	// Retrieve properties for all vms
 	var vmmo []mo.VirtualMachine
-	err = pc.Retrieve(ctx, vm_refs, []string{"summary"}, &vmmo)
+	err = pc.Retrieve(ctx, vmRefs, []string{"summary"}, &vmmo)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -278,7 +278,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	// Retrieve properties for hosts
 	var hsmo []mo.HostSystem
-	err = pc.Retrieve(ctx, host_refs, []string{"summary"}, &hsmo)
+	err = pc.Retrieve(ctx, hostRefs, []string{"summary"}, &hsmo)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -288,12 +288,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	vmToCluster := make(map[types.ManagedObjectReference]string)
 
 	// Retrieve properties for clusters, if any
-	if len(cluster_refs) > 0 {
+	if len(clusterRefs) > 0 {
 		if debug == true {
 			stdlog.Println("going inside clusters")
 		}
 		var clmo []mo.ClusterComputeResource
-		err = pc.Retrieve(ctx, cluster_refs, []string{"name", "configuration"}, &clmo)
+		err = pc.Retrieve(ctx, clusterRefs, []string{"name", "configuration"}, &clmo)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -302,7 +302,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			if debug == true {
 				stdlog.Println("---cluster name - you should see every cluster here---")
 				stdlog.Println(cl.Name)
-				stdlog.Println("You should see the cluster object, clsuter configuration object, and cluster configuration dasvmconfig which should contain all VMs")
+				stdlog.Println("You should see the cluster object, cluster configuration object, and cluster configuration dasvmconfig which should contain all VMs")
 				spew.Dump(cl)
 				spew.Dump(cl.Configuration)
 				spew.Dump(cl.Configuration.DasVmConfig)
@@ -319,32 +319,32 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	}
 
 	// Retrieve properties for the hosts
-	host_summary := make(map[types.ManagedObjectReference]map[string]string)
-	host_extra_metrics := make(map[types.ManagedObjectReference]map[string]int64)
+	hostSummary := make(map[types.ManagedObjectReference]map[string]string)
+	hostExtraMetrics := make(map[types.ManagedObjectReference]map[string]int64)
 
 	for _, host := range hsmo {
-		host_summary[host.Self] = make(map[string]string)
-		host_summary[host.Self]["name"] = host.Summary.Config.Name
-		host_extra_metrics[host.Self] = make(map[string]int64)
-		host_extra_metrics[host.Self]["cpu_corecount_total"] = int64(host.Summary.Hardware.NumCpuThreads)
+		hostSummary[host.Self] = make(map[string]string)
+		hostSummary[host.Self]["name"] = host.Summary.Config.Name
+		hostExtraMetrics[host.Self] = make(map[string]int64)
+		hostExtraMetrics[host.Self]["cpu_corecount_total"] = int64(host.Summary.Hardware.NumCpuThreads)
 	}
 
 	// Initialize the map that will hold all extra tags
-	vm_summary := make(map[types.ManagedObjectReference]map[string]string)
+	vmSummary := make(map[types.ManagedObjectReference]map[string]string)
 
-	// Assign extra details per VM in vm_summary
+	// Assign extra details per VM in vmSummary
 	for _, vm := range vmmo {
-		vm_summary[vm.Self] = make(map[string]string)
+		vmSummary[vm.Self] = make(map[string]string)
 		// Ugly way to extract datastore value
 		re, err := regexp.Compile(`\[(.*?)\]`)
 		if err != nil {
 			fmt.Println(err)
 		}
-		vm_summary[vm.Self]["datastore"] = strings.Replace(strings.Replace(re.FindString(fmt.Sprintln(vm.Summary.Config)), "[", "", -1), "]", "", -1)
+		vmSummary[vm.Self]["datastore"] = strings.Replace(strings.Replace(re.FindString(fmt.Sprintln(vm.Summary.Config)), "[", "", -1), "]", "", -1)
 		if vmToCluster[vm.Self] != "" {
-			vm_summary[vm.Self]["cluster"] = vmToCluster[vm.Self]
+			vmSummary[vm.Self]["cluster"] = vmToCluster[vm.Self]
 		}
-		vm_summary[vm.Self]["esx"] = host_summary[*vm.Summary.Runtime.Host]["name"]
+		vmSummary[vm.Self]["esx"] = hostSummary[*vm.Summary.Runtime.Host]["name"]
 	}
 
 	// get object names
@@ -446,19 +446,19 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		tags := map[string]string{"host": vcName, "name": name}
 
 		// Add extra per VM tags
-		if summary, ok := vm_summary[pem.Entity]; ok {
+		if summary, ok := vmSummary[pem.Entity]; ok {
 			for key, tag := range summary {
 				tags[key] = tag
 			}
 		}
-		if summary, ok := host_summary[pem.Entity]; ok {
+		if summary, ok := hostSummary[pem.Entity]; ok {
 			for key, tag := range summary {
 				tags[key] = tag
 			}
 		}
 
-		special_fields := make(map[string]map[string]map[string]map[string]interface{})
-		special_tags := make(map[string]map[string]map[string]map[string]string)
+		specialFields := make(map[string]map[string]map[string]map[string]interface{})
+		specialTags := make(map[string]map[string]map[string]map[string]string)
 		nowTime := time.Now()
 		for _, baseserie := range pem.Value {
 			serie := baseserie.(*types.PerfMetricIntSeries)
@@ -488,34 +488,34 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				fields[influxMetricName] = value
 			} else {
 				// init maps
-				if special_fields[measurementName] == nil {
-					special_fields[measurementName] = make(map[string]map[string]map[string]interface{})
-					special_tags[measurementName] = make(map[string]map[string]map[string]string)
+				if specialFields[measurementName] == nil {
+					specialFields[measurementName] = make(map[string]map[string]map[string]interface{})
+					specialTags[measurementName] = make(map[string]map[string]map[string]string)
 
 				}
 
-				if special_fields[measurementName][tags["name"]] == nil {
-					special_fields[measurementName][tags["name"]] = make(map[string]map[string]interface{})
-					special_tags[measurementName][tags["name"]] = make(map[string]map[string]string)
+				if specialFields[measurementName][tags["name"]] == nil {
+					specialFields[measurementName][tags["name"]] = make(map[string]map[string]interface{})
+					specialTags[measurementName][tags["name"]] = make(map[string]map[string]string)
 				}
 
-				if special_fields[measurementName][tags["name"]][instanceName] == nil {
-					special_fields[measurementName][tags["name"]][instanceName] = make(map[string]interface{})
-					special_tags[measurementName][tags["name"]][instanceName] = make(map[string]string)
+				if specialFields[measurementName][tags["name"]][instanceName] == nil {
+					specialFields[measurementName][tags["name"]][instanceName] = make(map[string]interface{})
+					specialTags[measurementName][tags["name"]][instanceName] = make(map[string]string)
 
 				}
 
-				special_fields[measurementName][tags["name"]][instanceName][influxMetricName] = value
+				specialFields[measurementName][tags["name"]][instanceName][influxMetricName] = value
 
 				for k, v := range tags {
-					special_tags[measurementName][tags["name"]][instanceName][k] = v
+					specialTags[measurementName][tags["name"]][instanceName][k] = v
 				}
-				special_tags[measurementName][tags["name"]][instanceName]["instance"] = instanceName
+				specialTags[measurementName][tags["name"]][instanceName]["instance"] = instanceName
 
 			}
 		}
 
-		if metrics, ok := host_extra_metrics[pem.Entity]; ok {
+		if metrics, ok := hostExtraMetrics[pem.Entity]; ok {
 			for key, value := range metrics {
 				fields[key] = value
 			}
@@ -528,10 +528,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		}
 		bp.AddPoint(pt)
 
-		for measurement, v := range special_fields {
+		for measurement, v := range specialFields {
 			for name, metric := range v {
 				for instance, value := range metric {
-					pt2, err := influxclient.NewPoint(measurement, special_tags[measurement][name][instance], value, time.Now())
+					pt2, err := influxclient.NewPoint(measurement, specialTags[measurement][name][instance], value, time.Now())
 					if err != nil {
 						errlog.Println(err)
 					}
