@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"golang.org/x/net/context"
 	"log"
 	"math"
 	"net/url"
@@ -31,6 +29,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
+	"golang.org/x/net/context"
 
 	influxclient "github.com/influxdata/influxdb/client/v2"
 	"github.com/vmware/govmomi"
@@ -613,6 +614,7 @@ func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxcl
 func main() {
 
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	var cfgFile = flag.String("config", "/etc/"+path.Base(os.Args[0])+".json", "Config file to use. Default is /etc/"+path.Base(os.Args[0])+".json")
 	flag.Parse()
 
 	stdlog = log.New(os.Stdout, "", log.Ldate|log.Ltime)
@@ -620,9 +622,9 @@ func main() {
 
 	stdlog.Println("Starting :", path.Base(os.Args[0]))
 	// read the configuration
-	file, err := os.Open("/etc/" + path.Base(os.Args[0]) + ".json")
+	file, err := os.Open(*cfgFile)
 	if err != nil {
-		errlog.Println("Could not open configuration file")
+		errlog.Println("Could not open configuration file" + *cfgFile)
 		errlog.Println(err)
 	}
 	jsondec := json.NewDecoder(file)
