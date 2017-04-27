@@ -47,7 +47,7 @@ const (
 	description = "send vsphere stats to influxdb"
 )
 
-// Configuration
+// Configuration is used to store config data
 type Configuration struct {
 	VCenters []*VCenter
 	Metrics  []Metric
@@ -56,7 +56,7 @@ type Configuration struct {
 	InfluxDB InfluxDB
 }
 
-// InfluxDB description
+// InfluxDB is used for InfluxDB connections
 type InfluxDB struct {
 	Hostname string
 	Username string
@@ -64,7 +64,7 @@ type InfluxDB struct {
 	Database string
 }
 
-// VCenter description
+// VCenter for VMware vCenter connections
 type VCenter struct {
 	Hostname     string
 	Username     string
@@ -72,30 +72,30 @@ type VCenter struct {
 	MetricGroups []*MetricGroup
 }
 
-// Metric Definition
+// MetricDef metric definition
 type MetricDef struct {
 	Metric    string
 	Instances string
 	Key       int32
 }
 
-// Metrics description in config
 var vmRefs []types.ManagedObjectReference
 var debug bool
 
+// Metric is used for metrics retrieval
 type Metric struct {
 	ObjectType []string
 	Definition []MetricDef
 }
 
-// Metric Grouping for retrieval
+// MetricGroup is used for grouping metrics retrieval
 type MetricGroup struct {
 	ObjectType string
 	Metrics    []MetricDef
 	Mor        []types.ManagedObjectReference
 }
 
-// Informations to query about an entity
+// EntityQuery are informations to query about an entity
 type EntityQuery struct {
 	Name    string
 	Entity  types.ManagedObjectReference
@@ -107,6 +107,7 @@ var dependencies = []string{}
 
 var stdlog, errlog *log.Logger
 
+// Connect to the actual vCenter connection used to query data
 func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 	// Prepare vCenter Connections
 	ctx, cancel := context.WithCancel(context.Background())
@@ -127,7 +128,7 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 	return client, nil
 }
 
-// Initialise vcenter
+// Init the VCenter connection
 func (vcenter *VCenter) Init(config Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -393,9 +394,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	queries := []types.PerfQuerySpec{}
 
 	// Common parameters
-	intervalIdint := 20
-	var intervalId int32
-	intervalId = int32(intervalIdint)
+	intervalIDint := 20
+	var intervalID int32
+	intervalID = int32(intervalIDint)
 
 	endTime := time.Now().Add(time.Duration(-1) * time.Second)
 	startTime := endTime.Add(time.Duration(-config.Interval) * time.Second)
@@ -410,7 +411,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				}
 			}
 		}
-		queries = append(queries, types.PerfQuerySpec{Entity: mor, StartTime: &startTime, EndTime: &endTime, MetricId: metricIds, IntervalId: intervalId})
+		queries = append(queries, types.PerfQuerySpec{Entity: mor, StartTime: &startTime, EndTime: &endTime, MetricId: metricIds, intervalID: intervalID})
 	}
 
 	// Query the performances
@@ -624,14 +625,14 @@ func main() {
 	// read the configuration
 	file, err := os.Open(*cfgFile)
 	if err != nil {
-		errlog.Println("Could not open configuration file" + *cfgFile)
+		errlog.Println("Could not open configuration file " + *cfgFile)
 		errlog.Println(err)
 	}
 	jsondec := json.NewDecoder(file)
 	config := Configuration{}
 	err = jsondec.Decode(&config)
 	if err != nil {
-		errlog.Println("Could not decode configuration file")
+		errlog.Println("Could not decode configuration file " + *cfgFile)
 		errlog.Println(err)
 
 	}
@@ -647,7 +648,7 @@ func main() {
 		errlog.Println("Could not connect to InfluxDB")
 		errlog.Println(err)
 	} else {
-		stdlog.Println("Successfully connected to Influx\n")
+		stdlog.Println("Successfully connected to Influx")
 	}
 	for _, vcenter := range config.VCenters {
 		queryVCenter(*vcenter, config, InfluxDBClient)
