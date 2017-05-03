@@ -21,8 +21,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"golang.org/x/net/context"
 	"log"
 	"math"
 	"net/url"
@@ -31,6 +29,9 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/davecgh/go-spew/spew"
+	"golang.org/x/net/context"
 
 	influxclient "github.com/influxdata/influxdb/client/v2"
 	"github.com/vmware/govmomi"
@@ -259,15 +260,13 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		} else if mor.Type == "HostSystem" {
 			host_refs = append(host_refs, mor)
 			new_mors = append(new_mors, mor)
-		}
-		    else if mor.Type == "ResourcePool" {
+		} else if mor.Type == "ResourcePool" {
 			resp_refs = append(resp_refs, mor)
 			new_mors = append(new_mors, mor)
-		}
-		 else if mor.Type == "ClusterComputeResource" {
+		} else if mor.Type == "ClusterComputeResource" {
 			cluster_refs = append(cluster_refs, mor)
 		}
-	
+
 	}
 	// Copy  the mors without the clusters
 	mors = new_mors
@@ -504,7 +503,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				if special_fields[measurementName] == nil {
 					special_fields[measurementName] = make(map[string]map[string]map[string]interface{})
 					special_tags[measurementName] = make(map[string]map[string]map[string]string)
-	}
+				}
 
 				if special_fields[measurementName][tags["name"]] == nil {
 					special_fields[measurementName][tags["name"]] = make(map[string]map[string]interface{})
@@ -664,5 +663,3 @@ func main() {
 		queryVCenter(*vcenter, config, InfluxDBClient)
 	}
 }
-
-  
