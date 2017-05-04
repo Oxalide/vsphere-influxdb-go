@@ -247,7 +247,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	vm_refs := []types.ManagedObjectReference{}
 	host_refs := []types.ManagedObjectReference{}
 	cluster_refs := []types.ManagedObjectReference{}
-	resp_refs := []types.ManagedObjectReference{}
+	//resp_refs := []types.ManagedObjectReference{}
 
 	new_mors := []types.ManagedObjectReference{}
 
@@ -260,9 +260,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		} else if mor.Type == "HostSystem" {
 			host_refs = append(host_refs, mor)
 			new_mors = append(new_mors, mor)
-		} else if mor.Type == "ResourcePool" {
-			resp_refs = append(resp_refs, mor)
-			new_mors = append(new_mors, mor)
+			//} else if mor.Type == "ResourcePool" {
+			//	resp_refs = append(resp_refs, mor)
+			//	new_mors = append(new_mors, mor)
 		} else if mor.Type == "ClusterComputeResource" {
 			cluster_refs = append(cluster_refs, mor)
 		}
