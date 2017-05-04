@@ -289,12 +289,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		return
 	}
 	// Retrieve properties for all resourcepools
-	var respmo []mo.ResourcePool
-	err = pc.Retrieve(ctx, resp_refs, []string{"summary"}, &respmo)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	//var respmo []mo.ResourcePool
+	//err = pc.Retrieve(ctx, resp_refs, []string{"summary"}, &respmo)
+	//if err != nil {
+	//	fmt.Println(err)
+	//return
+	//}
 
 	// Initialize the map that will hold the VM MOR to cluster reference
 	vmToCluster := make(map[types.ManagedObjectReference]string)
