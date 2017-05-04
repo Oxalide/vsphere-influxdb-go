@@ -632,7 +632,7 @@ func main() {
 
 	stdlog.Println("Starting :", path.Base(os.Args[0]))
 	// read the configuration
-	file, err := os.Open("/etc/" + path.Base(os.Args[0]) + ".json")
+	file, err := os.Open(path.Base(os.Args[0]) + ".json")
 	if err != nil {
 		errlog.Println("Could not open configuration file")
 		errlog.Println(err)
