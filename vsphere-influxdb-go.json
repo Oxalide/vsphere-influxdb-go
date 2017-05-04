@@ -65,10 +65,15 @@
 				{ "Metric": "net.throughput.contention.summation", "Instances": "*" }
 			]
 		},
-		   { "ObjectType": [ "ResourcePool" ],
+		    {
+                        "ObjectType": [ "ResourcePool" ],
                         "Definition": [
                                 { "Metric": "cpu.usagemhz.average", "Instances": "*" },
-                                { "Metric": "mem.consumed.average", "Instances": "*" }
+                                { "Metric": "cpu.cpuentitlement.latest", "Instances": "*" },
+                                { "Metric": "mem.mementitlement.latest", "Instances": "*" },
+                                { "Metric": "mem.consumed.average", "Instances": "*" },
+                                { "Metric": "mem.granted.average", "Instances": "*" },
+                                { "Metric": "mem.active.average", "Instances": "*" }
 						]
 		   }
 		
