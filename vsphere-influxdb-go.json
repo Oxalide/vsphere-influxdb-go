@@ -16,7 +16,7 @@
 	},
 	"Metrics": [
 		{ 
-			"ObjectType": [ "VirtualMachine", "HostSystem", "ResourcePool" ], 
+			"ObjectType": [ "VirtualMachine", "HostSystem" ], 
 			"Definition": [
 				{ "Metric": "cpu.usage.average", "Instances": "*" },
 				{ "Metric": "cpu.usage.maximum", "Instances": "*" },
@@ -64,18 +64,6 @@
 				{ "Metric": "disk.numberWriteAveraged.average", "Instances": "*" },
 				{ "Metric": "net.throughput.contention.summation", "Instances": "*" }
 			]
-		},
-		    {
-                        "ObjectType": [ "ResourcePool" ],
-                        "Definition": [
-                                { "Metric": "cpu.usagemhz.average", "Instances": "*" },
-                                { "Metric": "cpu.cpuentitlement.latest", "Instances": "*" },
-                                { "Metric": "mem.mementitlement.latest", "Instances": "*" },
-                                { "Metric": "mem.consumed.average", "Instances": "*" },
-                                { "Metric": "mem.granted.average", "Instances": "*" },
-                                { "Metric": "mem.active.average", "Instances": "*" }
-						]
-		   }
-		
+		}
 	]
 }
