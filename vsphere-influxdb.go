@@ -288,11 +288,19 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		return
 	}
 
+	//Retrieve properties for ResourcePool
+	var rpmo []mo.ResourcePool
+	err = pc.Retrieve(ctx, respool_refs, []string{"summary"}, &rpmo)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	// Initialize the map that will hold the VM MOR to ResourcePool reference
 	vmToPool := make(map[types.ManagedObjectReference]string)
 
 	// Retrieve properties for ResourcePools
-	if len(cluster_refs) > 0 {
+	if len(respool_refs) > 0 {
 		if debug == true {
 			stdlog.Println("going inside ResourcePools")
 		}
@@ -303,6 +311,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			return
 		}
 		for _, pool := range respool {
+			stdlog.Println(pool.Config.MemoryAllocation.GetResourceAllocationInfo().Limit)
+			stdlog.Println(pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit)
 			if debug == true {
 				stdlog.Println("---resourcepool name - you should see every resourcepool here (+VMs inside)----")
 				stdlog.Println(pool.Name)
@@ -349,6 +359,13 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				vmToCluster[vm.Key] = cl.Name
 			}
 		}
+	}
+
+	// Retrieve properties for the pools
+	respool_summary := make(map[types.ManagedObjectReference]map[string]string)
+	for _, pools := range rpmo {
+		respool_summary[pools.Self] = make(map[string]string)
+		respool_summary[pools.Self]["name"] = pools.Summary.GetResourcePoolSummary().Name
 	}
 
 	// Retrieve properties for the hosts
@@ -493,6 +510,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 		}
 
+		if summary, ok := respool_summary[pem.Entity]; ok {
+			for key, tag := range summary {
+				tags[key] = tag
+			}
+		}
+
 		special_fields := make(map[string]map[string]map[string]map[string]interface{})
 		special_tags := make(map[string]map[string]map[string]map[string]string)
 		nowTime := time.Now()
@@ -575,6 +598,26 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				}
 			}
 		}
+
+		var respool []mo.ResourcePool
+		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for _, pool := range respool {
+			respoolFields := map[string]interface{}{
+				"cpu_limit":    pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit,
+				"memory_limit": pool.Config.MemoryAllocation.GetResourceAllocationInfo().Limit,
+			}
+			respoolTags := map[string]string{"pool_name": pool.Name}
+			pt3, err := influxclient.NewPoint("resourcepool", respoolTags, respoolFields, time.Now())
+			if err != nil {
+				errlog.Println(err)
+			}
+			bp.AddPoint(pt3)
+		}
+
 	}
 	//InfluxDB send
 	err = InfluxDBClient.Write(bp)
