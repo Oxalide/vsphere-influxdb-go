@@ -47,7 +47,7 @@ const (
 	description = "send vsphere stats to influxdb"
 )
 
-// Configuration
+// Configuration is used to store config data
 type Configuration struct {
 	VCenters []*VCenter
 	Metrics  []Metric
@@ -56,7 +56,7 @@ type Configuration struct {
 	InfluxDB InfluxDB
 }
 
-// InfluxDB description
+// InfluxDB is used for InfluxDB connections
 type InfluxDB struct {
 	Hostname string
 	Username string
@@ -64,7 +64,7 @@ type InfluxDB struct {
 	Database string
 }
 
-// VCenter description
+// VCenter for VMware vCenter connections
 type VCenter struct {
 	Hostname     string
 	Username     string
@@ -72,30 +72,30 @@ type VCenter struct {
 	MetricGroups []*MetricGroup
 }
 
-// Metric Definition
+// MetricDef metric definition
 type MetricDef struct {
 	Metric    string
 	Instances string
 	Key       int32
 }
 
-// Metrics description in config
-var vm_refs []types.ManagedObjectReference
+var vmRefs []types.ManagedObjectReference
 var debug bool
 
+// Metric is used for metrics retrieval
 type Metric struct {
 	ObjectType []string
 	Definition []MetricDef
 }
 
-// Metric Grouping for retrieval
+// MetricGroup is used for grouping metrics retrieval
 type MetricGroup struct {
 	ObjectType string
 	Metrics    []MetricDef
 	Mor        []types.ManagedObjectReference
 }
 
-// Informations to query about an entity
+// EntityQuery are informations to query about an entity
 type EntityQuery struct {
 	Name    string
 	Entity  types.ManagedObjectReference
@@ -107,6 +107,7 @@ var dependencies = []string{}
 
 var stdlog, errlog *log.Logger
 
+// Connect to the actual vCenter connection used to query data
 func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 	// Prepare vCenter Connections
 	ctx, cancel := context.WithCancel(context.Background())
@@ -127,7 +128,7 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 	return client, nil
 }
 
-// Initialise vcenter
+// Init the VCenter connection
 func (vcenter *VCenter) Init(config Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -245,36 +246,37 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		mors = append(mors, containerView.View...)
 	}
 	// Create MORS for each object type
-	vm_refs := []types.ManagedObjectReference{}
-	host_refs := []types.ManagedObjectReference{}
-	cluster_refs := []types.ManagedObjectReference{}
-	respool_refs := []types.ManagedObjectReference{}
 
-	new_mors := []types.ManagedObjectReference{}
+	vmRefs := []types.ManagedObjectReference{}
+	hostRefs := []types.ManagedObjectReference{}
+	clusterRefs := []types.ManagedObjectReference{}
+	respoolRefs := []types.ManagedObjectReference{}
+
+	newMors := []types.ManagedObjectReference{}
 
 	spew.Dump(mors)
 	// Assign each MORS type to a specific array
 	for _, mor := range mors {
 		if mor.Type == "VirtualMachine" {
-			vm_refs = append(vm_refs, mor)
-			new_mors = append(new_mors, mor)
+			vmRefs = append(vmRefs, mor)
+			newMors = append(newMors, mor)
 		} else if mor.Type == "HostSystem" {
-			host_refs = append(host_refs, mor)
-			new_mors = append(new_mors, mor)
+			hostRefs = append(hostRefs, mor)
+			newMors = append(newMors, mor)
 		} else if mor.Type == "ClusterComputeResource" {
-			cluster_refs = append(cluster_refs, mor)
+			clusterRefs = append(cluster_refs, mor)
 		} else if mor.Type == "ResourcePool" {
-			respool_refs = append(respool_refs, mor)
+			respoolRefs = append(respool_refs, mor)
 		}
 	}
 	// Copy  the mors without the clusters
-	mors = new_mors
+	mors = newMors
 
 	pc := property.DefaultCollector(client.Client)
 
 	// Retrieve properties for all vms
 	var vmmo []mo.VirtualMachine
-	err = pc.Retrieve(ctx, vm_refs, []string{"summary"}, &vmmo)
+	err = pc.Retrieve(ctx, vmRefs, []string{"summary"}, &vmmo)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -282,7 +284,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	// Retrieve properties for hosts
 	var hsmo []mo.HostSystem
-	err = pc.Retrieve(ctx, host_refs, []string{"summary"}, &hsmo)
+	err = pc.Retrieve(ctx, hostRefs, []string{"summary"}, &hsmo)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -290,7 +292,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	//Retrieve properties for ResourcePool
 	var rpmo []mo.ResourcePool
-	err = pc.Retrieve(ctx, respool_refs, []string{"summary"}, &rpmo)
+	err = pc.Retrieve(ctx, respoolRefs, []string{"summary"}, &rpmo)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -300,7 +302,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	vmToPool := make(map[types.ManagedObjectReference]string)
 
 	// Retrieve properties for ResourcePools
-	if len(respool_refs) > 0 {
+	if len(respoolRefs) > 0 {
 		if debug == true {
 			stdlog.Println("going inside ResourcePools")
 		}
@@ -331,12 +333,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	vmToCluster := make(map[types.ManagedObjectReference]string)
 
 	// Retrieve properties for clusters, if any
-	if len(cluster_refs) > 0 {
+	if len(clusterRefs) > 0 {
 		if debug == true {
 			stdlog.Println("going inside clusters")
 		}
 		var clmo []mo.ClusterComputeResource
-		err = pc.Retrieve(ctx, cluster_refs, []string{"name", "configuration"}, &clmo)
+		err = pc.Retrieve(ctx, clusterRefs, []string{"name", "configuration"}, &clmo)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -345,7 +347,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			if debug == true {
 				stdlog.Println("---cluster name - you should see every cluster here---")
 				stdlog.Println(cl.Name)
-				stdlog.Println("You should see the cluster object, clsuter configuration object, and cluster configuration dasvmconfig which should contain all VMs")
+				stdlog.Println("You should see the cluster object, cluster configuration object, and cluster configuration dasvmconfig which should contain all VMs")
 				spew.Dump(cl)
 				spew.Dump(cl.Configuration)
 				spew.Dump(cl.Configuration.DasVmConfig)
@@ -369,35 +371,35 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	}
 
 	// Retrieve properties for the hosts
-	host_summary := make(map[types.ManagedObjectReference]map[string]string)
-	host_extra_metrics := make(map[types.ManagedObjectReference]map[string]int64)
+	hostSummary := make(map[types.ManagedObjectReference]map[string]string)
+	hostExtraMetrics := make(map[types.ManagedObjectReference]map[string]int64)
 
 	for _, host := range hsmo {
-		host_summary[host.Self] = make(map[string]string)
-		host_summary[host.Self]["name"] = host.Summary.Config.Name
-		host_extra_metrics[host.Self] = make(map[string]int64)
-		host_extra_metrics[host.Self]["cpu_corecount_total"] = int64(host.Summary.Hardware.NumCpuThreads)
+		hostSummary[host.Self] = make(map[string]string)
+		hostSummary[host.Self]["name"] = host.Summary.Config.Name
+		hostExtraMetrics[host.Self] = make(map[string]int64)
+		hostExtraMetrics[host.Self]["cpu_corecount_total"] = int64(host.Summary.Hardware.NumCpuThreads)
 	}
 
 	// Initialize the map that will hold all extra tags
-	vm_summary := make(map[types.ManagedObjectReference]map[string]string)
+	vmSummary := make(map[types.ManagedObjectReference]map[string]string)
 
-	// Assign extra details per VM in vm_summary
+	// Assign extra details per VM in vmSummary
 	for _, vm := range vmmo {
-		vm_summary[vm.Self] = make(map[string]string)
+		vmSummary[vm.Self] = make(map[string]string)
 		// Ugly way to extract datastore value
 		re, err := regexp.Compile(`\[(.*?)\]`)
 		if err != nil {
 			fmt.Println(err)
 		}
-		vm_summary[vm.Self]["datastore"] = strings.Replace(strings.Replace(re.FindString(fmt.Sprintln(vm.Summary.Config)), "[", "", -1), "]", "", -1)
+		vmSummary[vm.Self]["datastore"] = strings.Replace(strings.Replace(re.FindString(fmt.Sprintln(vm.Summary.Config)), "[", "", -1), "]", "", -1)
 		if vmToCluster[vm.Self] != "" {
-			vm_summary[vm.Self]["cluster"] = vmToCluster[vm.Self]
+			vmSummary[vm.Self]["cluster"] = vmToCluster[vm.Self]
 		}
 		if vmToPool[vm.Self] != "" {
-			vm_summary[vm.Self]["respool"] = vmToPool[vm.Self]
+			vmsummary[vm.Self]["respool"] = vmToPool[vm.Self]
 		}
-		vm_summary[vm.Self]["esx"] = host_summary[*vm.Summary.Runtime.Host]["name"]
+		vmsummary[vm.Self]["esx"] = host_summary[*vm.Summary.Runtime.Host]["name"]
 	}
 
 	// get object names
@@ -446,9 +448,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	queries := []types.PerfQuerySpec{}
 
 	// Common parameters
-	intervalIdint := 20
-	var intervalId int32
-	intervalId = int32(intervalIdint)
+	intervalIDint := 20
+	var intervalID int32
+	intervalID = int32(intervalIDint)
 
 	endTime := time.Now().Add(time.Duration(-1) * time.Second)
 	startTime := endTime.Add(time.Duration(-config.Interval) * time.Second)
@@ -463,7 +465,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				}
 			}
 		}
-		queries = append(queries, types.PerfQuerySpec{Entity: mor, StartTime: &startTime, EndTime: &endTime, MetricId: metricIds, IntervalId: intervalId})
+		queries = append(queries, types.PerfQuerySpec{Entity: mor, StartTime: &startTime, EndTime: &endTime, MetricId: metricIds, IntervalId: intervalID})
 	}
 
 	// Query the performances
@@ -499,12 +501,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		tags := map[string]string{"host": vcName, "name": name}
 
 		// Add extra per VM tags
-		if summary, ok := vm_summary[pem.Entity]; ok {
+		if summary, ok := vmSummary[pem.Entity]; ok {
 			for key, tag := range summary {
 				tags[key] = tag
 			}
 		}
-		if summary, ok := host_summary[pem.Entity]; ok {
+		if summary, ok := hostSummary[pem.Entity]; ok {
 			for key, tag := range summary {
 				tags[key] = tag
 			}
@@ -516,8 +518,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 		}
 
-		special_fields := make(map[string]map[string]map[string]map[string]interface{})
-		special_tags := make(map[string]map[string]map[string]map[string]string)
+		specialFields := make(map[string]map[string]map[string]map[string]interface{})
+		specialTags := make(map[string]map[string]map[string]map[string]string)
 		nowTime := time.Now()
 		for _, baseserie := range pem.Value {
 			serie := baseserie.(*types.PerfMetricIntSeries)
@@ -547,34 +549,34 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				fields[influxMetricName] = value
 			} else {
 				// init maps
-				if special_fields[measurementName] == nil {
-					special_fields[measurementName] = make(map[string]map[string]map[string]interface{})
-					special_tags[measurementName] = make(map[string]map[string]map[string]string)
+				if specialFields[measurementName] == nil {
+					specialFields[measurementName] = make(map[string]map[string]map[string]interface{})
+					specialTags[measurementName] = make(map[string]map[string]map[string]string)
 
 				}
 
-				if special_fields[measurementName][tags["name"]] == nil {
-					special_fields[measurementName][tags["name"]] = make(map[string]map[string]interface{})
-					special_tags[measurementName][tags["name"]] = make(map[string]map[string]string)
+				if specialFields[measurementName][tags["name"]] == nil {
+					specialFields[measurementName][tags["name"]] = make(map[string]map[string]interface{})
+					specialTags[measurementName][tags["name"]] = make(map[string]map[string]string)
 				}
 
-				if special_fields[measurementName][tags["name"]][instanceName] == nil {
-					special_fields[measurementName][tags["name"]][instanceName] = make(map[string]interface{})
-					special_tags[measurementName][tags["name"]][instanceName] = make(map[string]string)
+				if specialFields[measurementName][tags["name"]][instanceName] == nil {
+					specialFields[measurementName][tags["name"]][instanceName] = make(map[string]interface{})
+					specialTags[measurementName][tags["name"]][instanceName] = make(map[string]string)
 
 				}
 
-				special_fields[measurementName][tags["name"]][instanceName][influxMetricName] = value
+				specialFields[measurementName][tags["name"]][instanceName][influxMetricName] = value
 
 				for k, v := range tags {
-					special_tags[measurementName][tags["name"]][instanceName][k] = v
+					specialTags[measurementName][tags["name"]][instanceName][k] = v
 				}
-				special_tags[measurementName][tags["name"]][instanceName]["instance"] = instanceName
+				specialTags[measurementName][tags["name"]][instanceName]["instance"] = instanceName
 
 			}
 		}
 
-		if metrics, ok := host_extra_metrics[pem.Entity]; ok {
+		if metrics, ok := hostExtraMetrics[pem.Entity]; ok {
 			for key, value := range metrics {
 				fields[key] = value
 			}
@@ -587,10 +589,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		}
 		bp.AddPoint(pt)
 
-		for measurement, v := range special_fields {
+		for measurement, v := range specialFields {
 			for name, metric := range v {
 				for instance, value := range metric {
-					pt2, err := influxclient.NewPoint(measurement, special_tags[measurement][name][instance], value, time.Now())
+					pt2, err := influxclient.NewPoint(measurement, specialTags[measurement][name][instance], value, time.Now())
 					if err != nil {
 						errlog.Println(err)
 					}
@@ -662,7 +664,7 @@ func max(n ...int64) int64 {
 }
 
 func sum(n ...int64) int64 {
-	var total int64 = 0
+	var total int64
 	for _, i := range n {
 		if i > 0 {
 			total += i
@@ -672,12 +674,12 @@ func sum(n ...int64) int64 {
 }
 
 func average(n ...int64) int64 {
-	var total int64 = 0
-	var count int64 = 0
+	var total int64
+	var count int64
 	for _, i := range n {
 		if i >= 0 {
-			count += 1
-			total += i
+			count++
+			total++
 		}
 	}
 	favg := float64(total) / float64(count)
@@ -693,6 +695,7 @@ func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxcl
 func main() {
 
 	flag.BoolVar(&debug, "debug", true, "Debug mode")
+	var cfgFile = flag.String("config", "/etc/"+path.Base(os.Args[0])+".json", "Config file to use. Default is /etc/"+path.Base(os.Args[0])+".json")
 	flag.Parse()
 
 	stdlog = log.New(os.Stdout, "", log.Ldate|log.Ltime)
@@ -700,16 +703,16 @@ func main() {
 
 	stdlog.Println("Starting :", path.Base(os.Args[0]))
 	// read the configuration
-	file, err := os.Open(path.Base(os.Args[0]) + ".json")
+	file, err := os.Open(*cfgFile)
 	if err != nil {
-		errlog.Println("Could not open configuration file")
+		errlog.Println("Could not open configuration file " + *cfgFile)
 		errlog.Println(err)
 	}
 	jsondec := json.NewDecoder(file)
 	config := Configuration{}
 	err = jsondec.Decode(&config)
 	if err != nil {
-		errlog.Println("Could not decode configuration file")
+		errlog.Println("Could not decode configuration file " + *cfgFile)
 		errlog.Println(err)
 
 	}
@@ -725,7 +728,7 @@ func main() {
 		errlog.Println("Could not connect to InfluxDB")
 		errlog.Println(err)
 	} else {
-		stdlog.Println("Successfully connected to Influx\n")
+		stdlog.Println("Successfully connected to Influx")
 	}
 	for _, vcenter := range config.VCenters {
 		queryVCenter(*vcenter, config, InfluxDBClient)

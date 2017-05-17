@@ -25,7 +25,7 @@ go get github.com/oxalide/vsphere-influxdb-go
 This will install the project in your $GOBIN($GOPATH/bin). If you have appended $GOBIN to your $PATH, you will be able to call it directly. Otherwise, you'll have to call it with its full path. 
 Example:
 ```
-vsphere-influxdb-go 
+vsphere-influxdb-go
 ```
 or :
 ```
@@ -45,9 +45,9 @@ To see all available metrics, check out [this](http://www.virten.net/2015/05/vsp
 Note: Not all metrics are available directly, you might need to change your metric collection level. 
 A table with the level needed for each metric is availble [here](http://www.virten.net/2015/05/which-performance-counters-are-available-in-each-statistic-level/), and you can find a PowerCLI script that changes the collect level [here](http://www.valcolabs.com/2012/02/06/modify-historical-statistics-level-using-powercli/)
 
-An example of configuration file is [here](./vsphere-influxdb-go.json).
+An example of configuration file is [here](./vsphere-influxdb.json.sample).
 
-You need to place it at /etc/*binaryname*.json (/etc/vsphere-influxdb-go.json by default)
+You need to place it at /etc/*binaryname*.json (/etc/vsphere-influxdb.json by default) or you can specify a different location using the config flag.
 
 
 # Run as a service
