@@ -105,6 +105,7 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 	// Prepare vCenter Connections
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	stdlog.Println("connecting to vcenter: " + vcenter.Hostname)
 	u, err := url.Parse("https://" + vcenter.Username + ":" + vcenter.Password + "@" + vcenter.Hostname + "/sdk")
 	if err != nil {
@@ -112,12 +113,14 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 		errlog.Println("Error: ", err)
 		return nil, err
 	}
+
 	client, err := govmomi.NewClient(ctx, u, true)
 	if err != nil {
 		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
 		errlog.Println("Error: ", err)
 		return nil, err
 	}
+
 	return client, nil
 }
 
@@ -125,6 +128,7 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 func (vcenter *VCenter) Init(config Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	client, err := vcenter.Connect()
 	if err != nil {
 		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
@@ -132,6 +136,7 @@ func (vcenter *VCenter) Init(config Configuration) {
 		return
 	}
 	defer client.Logout(ctx)
+
 	var perfmanager mo.PerformanceManager
 	err = client.RetrieveOne(ctx, *client.ServiceContent.PerfManager, nil, &perfmanager)
 	if err != nil {
@@ -139,6 +144,7 @@ func (vcenter *VCenter) Init(config Configuration) {
 		errlog.Println("Error: ", err)
 		return
 	}
+
 	for _, perf := range perfmanager.PerfCounter {
 		groupinfo := perf.GroupInfo.GetElementDescription()
 		nameinfo := perf.NameInfo.GetElementDescription()
@@ -262,7 +268,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			respoolRefs = append(respool_refs, mor)
 		}
 	}
-	// Copy  the mors without the clusters
+	// Copy the mors without the clusters
 	mors = newMors
 
 	pc := property.DefaultCollector(client.Client)
@@ -345,6 +351,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				spew.Dump(cl.Configuration)
 				spew.Dump(cl.Configuration.DasVmConfig)
 			}
+
 			for _, vm := range cl.Configuration.DasVmConfig {
 				if debug == true {
 					stdlog.Println("--VM ID - you should see every VM ID here--")
@@ -565,7 +572,6 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 					specialTags[measurementName][tags["name"]][instanceName][k] = v
 				}
 				specialTags[measurementName][tags["name"]][instanceName]["instance"] = instanceName
-
 			}
 		}
 
@@ -614,6 +620,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		}
 
 	}
+
 	//InfluxDB send
 	err = InfluxDBClient.Write(bp)
 	if err != nil {
@@ -682,7 +689,6 @@ func average(n ...int64) int64 {
 func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxclient.Client) {
 	stdlog.Println("Querying vcenter")
 	vcenter.Query(config, InfluxDBClient)
-
 }
 
 func main() {
@@ -695,23 +701,26 @@ func main() {
 	errlog = log.New(os.Stderr, "", log.Ldate|log.Ltime)
 
 	stdlog.Println("Starting :", path.Base(os.Args[0]))
+
 	// read the configuration
 	file, err := os.Open(*cfgFile)
 	if err != nil {
 		errlog.Println("Could not open configuration file " + *cfgFile)
 		errlog.Println(err)
 	}
+
 	jsondec := json.NewDecoder(file)
 	config := Configuration{}
 	err = jsondec.Decode(&config)
 	if err != nil {
 		errlog.Println("Could not decode configuration file " + *cfgFile)
 		errlog.Println(err)
-
 	}
+
 	for _, vcenter := range config.VCenters {
 		vcenter.Init(config)
 	}
+
 	InfluxDBClient, err := influxclient.NewHTTPClient(influxclient.HTTPConfig{
 		Addr:     config.InfluxDB.Hostname,
 		Username: config.InfluxDB.Username,
