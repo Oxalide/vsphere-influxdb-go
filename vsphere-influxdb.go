@@ -706,7 +706,7 @@ func main() {
 	file, err := os.Open(*cfgFile)
 	if err != nil {
 		errlog.Println("Could not open configuration file", *cfgFile)
-		errlog.Println(err)
+		errlog.Fatalln(err)
 	}
 
 	jsondec := json.NewDecoder(file)
@@ -714,7 +714,7 @@ func main() {
 	err = jsondec.Decode(&config)
 	if err != nil {
 		errlog.Println("Could not decode configuration file", *cfgFile)
-		errlog.Println(err)
+		errlog.Fatalln(err)
 	}
 
 	for _, vcenter := range config.VCenters {
@@ -728,10 +728,11 @@ func main() {
 	})
 	if err != nil {
 		errlog.Println("Could not connect to InfluxDB")
-		errlog.Println(err)
-	} else {
-		stdlog.Println("Successfully connected to Influx")
+		errlog.Fatalln(err)
 	}
+
+	stdlog.Println("Successfully connected to Influx")
+
 	for _, vcenter := range config.VCenters {
 		queryVCenter(*vcenter, config, InfluxDBClient)
 	}
