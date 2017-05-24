@@ -1,18 +1,17 @@
-/*  Copyright 2016 Adrian Todorov, Oxalide ato@oxalide.com
+/*	Copyright 2016 Adrian Todorov, Oxalide ato@oxalide.com
 	Original project author: https://github.com/cblomart
 	This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	(at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package main
@@ -31,14 +30,13 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"golang.org/x/net/context"
-
 	influxclient "github.com/influxdata/influxdb/client/v2"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/property"
 	"github.com/vmware/govmomi/vim25/methods"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -79,9 +77,6 @@ type MetricDef struct {
 	Key       int32
 }
 
-var vmRefs []types.ManagedObjectReference
-var debug bool
-
 // Metric is used for metrics retrieval
 type Metric struct {
 	ObjectType []string
@@ -102,9 +97,7 @@ type EntityQuery struct {
 	Metrics []int32
 }
 
-// A few global variables
-var dependencies = []string{}
-
+var debug bool
 var stdlog, errlog *log.Logger
 
 // Connect to the actual vCenter connection used to query data
@@ -112,6 +105,7 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 	// Prepare vCenter Connections
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	stdlog.Println("connecting to vcenter: " + vcenter.Hostname)
 	u, err := url.Parse("https://" + vcenter.Username + ":" + vcenter.Password + "@" + vcenter.Hostname + "/sdk")
 	if err != nil {
@@ -119,12 +113,14 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 		errlog.Println("Error: ", err)
 		return nil, err
 	}
+
 	client, err := govmomi.NewClient(ctx, u, true)
 	if err != nil {
 		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
 		errlog.Println("Error: ", err)
 		return nil, err
 	}
+
 	return client, nil
 }
 
@@ -132,6 +128,7 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 func (vcenter *VCenter) Init(config Configuration) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	client, err := vcenter.Connect()
 	if err != nil {
 		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
@@ -139,6 +136,7 @@ func (vcenter *VCenter) Init(config Configuration) {
 		return
 	}
 	defer client.Logout(ctx)
+
 	var perfmanager mo.PerformanceManager
 	err = client.RetrieveOne(ctx, *client.ServiceContent.PerfManager, nil, &perfmanager)
 	if err != nil {
@@ -146,6 +144,7 @@ func (vcenter *VCenter) Init(config Configuration) {
 		errlog.Println("Error: ", err)
 		return
 	}
+
 	for _, perf := range perfmanager.PerfCounter {
 		groupinfo := perf.GroupInfo.GetElementDescription()
 		nameinfo := perf.NameInfo.GetElementDescription()
@@ -245,8 +244,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		// Add found object to object list
 		mors = append(mors, containerView.View...)
 	}
-	// Create MORS for each object type
 
+	// Create MORS for each object type
 	vmRefs := []types.ManagedObjectReference{}
 	hostRefs := []types.ManagedObjectReference{}
 	clusterRefs := []types.ManagedObjectReference{}
@@ -264,12 +263,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			hostRefs = append(hostRefs, mor)
 			newMors = append(newMors, mor)
 		} else if mor.Type == "ClusterComputeResource" {
-			clusterRefs = append(cluster_refs, mor)
+			clusterRefs = append(clusterRefs, mor)
 		} else if mor.Type == "ResourcePool" {
-			respoolRefs = append(respool_refs, mor)
+			respoolRefs = append(respoolRefs, mor)
 		}
 	}
-	// Copy  the mors without the clusters
+	// Copy the mors without the clusters
 	mors = newMors
 
 	pc := property.DefaultCollector(client.Client)
@@ -307,7 +306,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			stdlog.Println("going inside ResourcePools")
 		}
 		var respool []mo.ResourcePool
-		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
+		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -352,6 +351,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				spew.Dump(cl.Configuration)
 				spew.Dump(cl.Configuration.DasVmConfig)
 			}
+
 			for _, vm := range cl.Configuration.DasVmConfig {
 				if debug == true {
 					stdlog.Println("--VM ID - you should see every VM ID here--")
@@ -364,10 +364,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	}
 
 	// Retrieve properties for the pools
-	respool_summary := make(map[types.ManagedObjectReference]map[string]string)
+	respoolSummary := make(map[types.ManagedObjectReference]map[string]string)
 	for _, pools := range rpmo {
-		respool_summary[pools.Self] = make(map[string]string)
-		respool_summary[pools.Self]["name"] = pools.Summary.GetResourcePoolSummary().Name
+		respoolSummary[pools.Self] = make(map[string]string)
+		respoolSummary[pools.Self]["name"] = pools.Summary.GetResourcePoolSummary().Name
 	}
 
 	// Retrieve properties for the hosts
@@ -487,6 +487,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	})
 	if err != nil {
 		errlog.Println(err)
+		return
 	}
 
 	for _, base := range perfres.Returnval {
@@ -512,7 +513,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 		}
 
-		if summary, ok := respool_summary[pem.Entity]; ok {
+		if summary, ok := respoolSummary[pem.Entity]; ok {
 			for key, tag := range summary {
 				tags[key] = tag
 			}
@@ -572,7 +573,6 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 					specialTags[measurementName][tags["name"]][instanceName][k] = v
 				}
 				specialTags[measurementName][tags["name"]][instanceName]["instance"] = instanceName
-
 			}
 		}
 
@@ -586,6 +586,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		pt, err := influxclient.NewPoint(entityName, tags, fields, nowTime)
 		if err != nil {
 			errlog.Println(err)
+			continue
 		}
 		bp.AddPoint(pt)
 
@@ -595,6 +596,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 					pt2, err := influxclient.NewPoint(measurement, specialTags[measurement][name][instance], value, time.Now())
 					if err != nil {
 						errlog.Println(err)
+						continue
 					}
 					bp.AddPoint(pt2)
 				}
@@ -602,11 +604,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		}
 
 		var respool []mo.ResourcePool
-		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
+		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
 		if err != nil {
-			fmt.Println(err)
-			return
+			errlog.Println(err)
+			continue
 		}
+
 		for _, pool := range respool {
 			respoolFields := map[string]interface{}{
 				"cpu_limit":    pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit,
@@ -616,19 +619,21 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			pt3, err := influxclient.NewPoint("resourcepool", respoolTags, respoolFields, time.Now())
 			if err != nil {
 				errlog.Println(err)
+				continue
 			}
 			bp.AddPoint(pt3)
 		}
 
 	}
+
 	//InfluxDB send
 	err = InfluxDBClient.Write(bp)
 	if err != nil {
 		errlog.Println(err)
-	} else {
-		stdlog.Println("sent data to Influxdb")
+		return
 	}
 
+	stdlog.Println("sent data to Influxdb")
 }
 
 func min(n ...int64) int64 {
@@ -689,12 +694,10 @@ func average(n ...int64) int64 {
 func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxclient.Client) {
 	stdlog.Println("Querying vcenter")
 	vcenter.Query(config, InfluxDBClient)
-
 }
 
 func main() {
-
-	flag.BoolVar(&debug, "debug", true, "Debug mode")
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	var cfgFile = flag.String("config", "/etc/"+path.Base(os.Args[0])+".json", "Config file to use. Default is /etc/"+path.Base(os.Args[0])+".json")
 	flag.Parse()
 
@@ -702,23 +705,26 @@ func main() {
 	errlog = log.New(os.Stderr, "", log.Ldate|log.Ltime)
 
 	stdlog.Println("Starting :", path.Base(os.Args[0]))
+
 	// read the configuration
 	file, err := os.Open(*cfgFile)
 	if err != nil {
-		errlog.Println("Could not open configuration file " + *cfgFile)
-		errlog.Println(err)
+		errlog.Println("Could not open configuration file", *cfgFile)
+		errlog.Fatalln(err)
 	}
+
 	jsondec := json.NewDecoder(file)
 	config := Configuration{}
 	err = jsondec.Decode(&config)
 	if err != nil {
-		errlog.Println("Could not decode configuration file " + *cfgFile)
-		errlog.Println(err)
-
+		errlog.Println("Could not decode configuration file", *cfgFile)
+		errlog.Fatalln(err)
 	}
+
 	for _, vcenter := range config.VCenters {
 		vcenter.Init(config)
 	}
+
 	InfluxDBClient, err := influxclient.NewHTTPClient(influxclient.HTTPConfig{
 		Addr:     config.InfluxDB.Hostname,
 		Username: config.InfluxDB.Username,
@@ -726,10 +732,11 @@ func main() {
 	})
 	if err != nil {
 		errlog.Println("Could not connect to InfluxDB")
-		errlog.Println(err)
-	} else {
-		stdlog.Println("Successfully connected to Influx")
+		errlog.Fatalln(err)
 	}
+
+	stdlog.Println("Successfully connected to Influx")
+
 	for _, vcenter := range config.VCenters {
 		queryVCenter(*vcenter, config, InfluxDBClient)
 	}
