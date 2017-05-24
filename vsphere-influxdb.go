@@ -487,6 +487,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	})
 	if err != nil {
 		errlog.Println(err)
+		return
 	}
 
 	for _, base := range perfres.Returnval {
@@ -585,6 +586,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		pt, err := influxclient.NewPoint(entityName, tags, fields, nowTime)
 		if err != nil {
 			errlog.Println(err)
+			continue
 		}
 		bp.AddPoint(pt)
 
@@ -594,6 +596,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 					pt2, err := influxclient.NewPoint(measurement, specialTags[measurement][name][instance], value, time.Now())
 					if err != nil {
 						errlog.Println(err)
+						continue
 					}
 					bp.AddPoint(pt2)
 				}
@@ -625,10 +628,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	err = InfluxDBClient.Write(bp)
 	if err != nil {
 		errlog.Println(err)
-	} else {
-		stdlog.Println("sent data to Influxdb")
+		return
 	}
 
+	stdlog.Println("sent data to Influxdb")
 }
 
 func min(n ...int64) int64 {
