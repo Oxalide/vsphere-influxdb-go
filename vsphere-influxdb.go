@@ -705,7 +705,7 @@ func main() {
 	// read the configuration
 	file, err := os.Open(*cfgFile)
 	if err != nil {
-		errlog.Println("Could not open configuration file " + *cfgFile)
+		errlog.Println("Could not open configuration file", *cfgFile)
 		errlog.Println(err)
 	}
 
@@ -713,7 +713,7 @@ func main() {
 	config := Configuration{}
 	err = jsondec.Decode(&config)
 	if err != nil {
-		errlog.Println("Could not decode configuration file " + *cfgFile)
+		errlog.Println("Could not decode configuration file", *cfgFile)
 		errlog.Println(err)
 	}
 
