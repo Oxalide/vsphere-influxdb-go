@@ -244,8 +244,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		// Add found object to object list
 		mors = append(mors, containerView.View...)
 	}
-	// Create MORS for each object type
 
+	// Create MORS for each object type
 	vmRefs := []types.ManagedObjectReference{}
 	hostRefs := []types.ManagedObjectReference{}
 	clusterRefs := []types.ManagedObjectReference{}
@@ -606,9 +606,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		var respool []mo.ResourcePool
 		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
 		if err != nil {
-			fmt.Println(err)
-			return
+			errlog.Println(err)
+			continue
 		}
+
 		for _, pool := range respool {
 			respoolFields := map[string]interface{}{
 				"cpu_limit":    pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit,
@@ -618,6 +619,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			pt3, err := influxclient.NewPoint("resourcepool", respoolTags, respoolFields, time.Now())
 			if err != nil {
 				errlog.Println(err)
+				continue
 			}
 			bp.AddPoint(pt3)
 		}
@@ -695,8 +697,7 @@ func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxcl
 }
 
 func main() {
-
-	flag.BoolVar(&debug, "debug", true, "Debug mode")
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	var cfgFile = flag.String("config", "/etc/"+path.Base(os.Args[0])+".json", "Config file to use. Default is /etc/"+path.Base(os.Args[0])+".json")
 	flag.Parse()
 
