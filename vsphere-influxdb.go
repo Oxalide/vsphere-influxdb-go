@@ -77,9 +77,6 @@ type MetricDef struct {
 	Key       int32
 }
 
-var vmRefs []types.ManagedObjectReference
-var debug bool
-
 // Metric is used for metrics retrieval
 type Metric struct {
 	ObjectType []string
@@ -100,9 +97,7 @@ type EntityQuery struct {
 	Metrics []int32
 }
 
-// A few global variables
-var dependencies = []string{}
-
+var debug bool
 var stdlog, errlog *log.Logger
 
 // Connect to the actual vCenter connection used to query data
