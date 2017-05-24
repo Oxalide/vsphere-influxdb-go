@@ -263,9 +263,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			hostRefs = append(hostRefs, mor)
 			newMors = append(newMors, mor)
 		} else if mor.Type == "ClusterComputeResource" {
-			clusterRefs = append(cluster_refs, mor)
+			clusterRefs = append(clusterRefs, mor)
 		} else if mor.Type == "ResourcePool" {
-			respoolRefs = append(respool_refs, mor)
+			respoolRefs = append(respoolRefs, mor)
 		}
 	}
 	// Copy the mors without the clusters
@@ -306,7 +306,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			stdlog.Println("going inside ResourcePools")
 		}
 		var respool []mo.ResourcePool
-		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
+		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -364,10 +364,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	}
 
 	// Retrieve properties for the pools
-	respool_summary := make(map[types.ManagedObjectReference]map[string]string)
+	respoolSummary := make(map[types.ManagedObjectReference]map[string]string)
 	for _, pools := range rpmo {
-		respool_summary[pools.Self] = make(map[string]string)
-		respool_summary[pools.Self]["name"] = pools.Summary.GetResourcePoolSummary().Name
+		respoolSummary[pools.Self] = make(map[string]string)
+		respoolSummary[pools.Self]["name"] = pools.Summary.GetResourcePoolSummary().Name
 	}
 
 	// Retrieve properties for the hosts
@@ -513,7 +513,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 		}
 
-		if summary, ok := respool_summary[pem.Entity]; ok {
+		if summary, ok := respoolSummary[pem.Entity]; ok {
 			for key, tag := range summary {
 				tags[key] = tag
 			}
@@ -604,7 +604,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		}
 
 		var respool []mo.ResourcePool
-		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
+		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
 		if err != nil {
 			errlog.Println(err)
 			continue
