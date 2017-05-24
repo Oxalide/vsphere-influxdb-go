@@ -684,7 +684,7 @@ func average(n ...int64) int64 {
 	for _, i := range n {
 		if i >= 0 {
 			count++
-			total++
+			total += i
 		}
 	}
 	favg := float64(total) / float64(count)
