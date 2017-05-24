@@ -221,6 +221,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		objectTypes = append(objectTypes, group.ObjectType)
 	}
 	objectTypes = append(objectTypes, "ClusterComputeResource")
+	objectTypes = append(objectTypes, "ResourcePool")
 
 	// Loop trought datacenters and create the intersting object reference list
 	mors := []types.ManagedObjectReference{}
@@ -245,9 +246,11 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		mors = append(mors, containerView.View...)
 	}
 	// Create MORS for each object type
+
 	vmRefs := []types.ManagedObjectReference{}
 	hostRefs := []types.ManagedObjectReference{}
 	clusterRefs := []types.ManagedObjectReference{}
+	respoolRefs := []types.ManagedObjectReference{}
 
 	newMors := []types.ManagedObjectReference{}
 
@@ -261,7 +264,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			hostRefs = append(hostRefs, mor)
 			newMors = append(newMors, mor)
 		} else if mor.Type == "ClusterComputeResource" {
-			clusterRefs = append(clusterRefs, mor)
+			clusterRefs = append(cluster_refs, mor)
+		} else if mor.Type == "ResourcePool" {
+			respoolRefs = append(respool_refs, mor)
 		}
 	}
 	// Copy  the mors without the clusters
@@ -283,6 +288,45 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+
+	//Retrieve properties for ResourcePool
+	var rpmo []mo.ResourcePool
+	err = pc.Retrieve(ctx, respoolRefs, []string{"summary"}, &rpmo)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// Initialize the map that will hold the VM MOR to ResourcePool reference
+	vmToPool := make(map[types.ManagedObjectReference]string)
+
+	// Retrieve properties for ResourcePools
+	if len(respoolRefs) > 0 {
+		if debug == true {
+			stdlog.Println("going inside ResourcePools")
+		}
+		var respool []mo.ResourcePool
+		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for _, pool := range respool {
+			stdlog.Println(pool.Config.MemoryAllocation.GetResourceAllocationInfo().Limit)
+			stdlog.Println(pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit)
+			if debug == true {
+				stdlog.Println("---resourcepool name - you should see every resourcepool here (+VMs inside)----")
+				stdlog.Println(pool.Name)
+			}
+			for _, vm := range pool.Vm {
+				if debug == true {
+					stdlog.Println("--VM ID - you should see every VM ID here--")
+					stdlog.Println(vm)
+				}
+				vmToPool[vm] = pool.Name
+			}
+		}
 	}
 
 	// Initialize the map that will hold the VM MOR to cluster reference
@@ -319,6 +363,13 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		}
 	}
 
+	// Retrieve properties for the pools
+	respool_summary := make(map[types.ManagedObjectReference]map[string]string)
+	for _, pools := range rpmo {
+		respool_summary[pools.Self] = make(map[string]string)
+		respool_summary[pools.Self]["name"] = pools.Summary.GetResourcePoolSummary().Name
+	}
+
 	// Retrieve properties for the hosts
 	hostSummary := make(map[types.ManagedObjectReference]map[string]string)
 	hostExtraMetrics := make(map[types.ManagedObjectReference]map[string]int64)
@@ -345,7 +396,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		if vmToCluster[vm.Self] != "" {
 			vmSummary[vm.Self]["cluster"] = vmToCluster[vm.Self]
 		}
-		vmSummary[vm.Self]["esx"] = hostSummary[*vm.Summary.Runtime.Host]["name"]
+		if vmToPool[vm.Self] != "" {
+			vmsummary[vm.Self]["respool"] = vmToPool[vm.Self]
+		}
+		vmsummary[vm.Self]["esx"] = host_summary[*vm.Summary.Runtime.Host]["name"]
 	}
 
 	// get object names
@@ -458,6 +512,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 		}
 
+		if summary, ok := respool_summary[pem.Entity]; ok {
+			for key, tag := range summary {
+				tags[key] = tag
+			}
+		}
+
 		specialFields := make(map[string]map[string]map[string]map[string]interface{})
 		specialTags := make(map[string]map[string]map[string]map[string]string)
 		nowTime := time.Now()
@@ -540,6 +600,26 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				}
 			}
 		}
+
+		var respool []mo.ResourcePool
+		err = pc.Retrieve(ctx, respool_refs, []string{"name", "config", "vm"}, &respool)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		for _, pool := range respool {
+			respoolFields := map[string]interface{}{
+				"cpu_limit":    pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit,
+				"memory_limit": pool.Config.MemoryAllocation.GetResourceAllocationInfo().Limit,
+			}
+			respoolTags := map[string]string{"pool_name": pool.Name}
+			pt3, err := influxclient.NewPoint("resourcepool", respoolTags, respoolFields, time.Now())
+			if err != nil {
+				errlog.Println(err)
+			}
+			bp.AddPoint(pt3)
+		}
+
 	}
 	//InfluxDB send
 	err = InfluxDBClient.Write(bp)
@@ -614,7 +694,7 @@ func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxcl
 
 func main() {
 
-	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	flag.BoolVar(&debug, "debug", true, "Debug mode")
 	var cfgFile = flag.String("config", "/etc/"+path.Base(os.Args[0])+".json", "Config file to use. Default is /etc/"+path.Base(os.Args[0])+".json")
 	flag.Parse()
 
