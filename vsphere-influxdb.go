@@ -397,9 +397,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			vmSummary[vm.Self]["cluster"] = vmToCluster[vm.Self]
 		}
 		if vmToPool[vm.Self] != "" {
-			vmsummary[vm.Self]["respool"] = vmToPool[vm.Self]
+			vmSummary[vm.Self]["respool"] = vmToPool[vm.Self]
 		}
-		vmsummary[vm.Self]["esx"] = host_summary[*vm.Summary.Runtime.Host]["name"]
+		vmSummary[vm.Self]["esx"] = hostSummary[*vm.Summary.Runtime.Host]["name"]
 	}
 
 	// get object names
