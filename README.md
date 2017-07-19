@@ -2,7 +2,7 @@
 
 # Collect VMware vSphere, vCenter and ESXi performance metrics and send them to InfluxDB
 
-# Extenal dependencies
+# External dependencies
 
 * [govmomi](https://github.com/vmware/govmomi)
 * [influxDB go client](https://github.com/influxdata/influxdb/tree/master/client/v2)
