@@ -253,7 +253,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	newMors := []types.ManagedObjectReference{}
 
-	spew.Dump(mors)
+	if debug == true {
+		spew.Dump(mors)
+	}
 	// Assign each MORS type to a specific array
 	for _, mor := range mors {
 		if mor.Type == "VirtualMachine" {
