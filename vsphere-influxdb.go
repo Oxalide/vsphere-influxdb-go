@@ -253,7 +253,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	newMors := []types.ManagedObjectReference{}
 
-	spew.Dump(mors)
+	if debug == true {
+		spew.Dump(mors)
+	}
 	// Assign each MORS type to a specific array
 	for _, mor := range mors {
 		if mor.Type == "VirtualMachine" {
@@ -268,9 +270,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			respoolRefs = append(respoolRefs, mor)
 		}
 	}
+	
 	// Copy the mors without the clusters
 	mors = newMors
-
 	pc := property.DefaultCollector(client.Client)
 
 	// Retrieve properties for all vms
@@ -283,12 +285,20 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	// Retrieve properties for hosts
 	var hsmo []mo.HostSystem
-	err = pc.Retrieve(ctx, hostRefs, []string{"summary"}, &hsmo)
+	err = pc.Retrieve(ctx, hostRefs, []string{"parent", "summary"}, &hsmo)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
+	
+	//Retrieve properties for Cluster(s)
+	var clmo []mo.ClusterComputeResource
+	err = pc.Retrieve(ctx, clusterRefs, []string{"name", "configuration", "host"}, &clmo)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	
 	//Retrieve properties for ResourcePool
 	var rpmo []mo.ResourcePool
 	err = pc.Retrieve(ctx, respoolRefs, []string{"summary"}, &rpmo)
@@ -331,36 +341,40 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	// Initialize the map that will hold the VM MOR to cluster reference
 	vmToCluster := make(map[types.ManagedObjectReference]string)
 
+	// Initialize the map that will hold the VM MOR to cluster reference
+	hostToCluster := make(map[types.ManagedObjectReference]string)
+	
 	// Retrieve properties for clusters, if any
 	if len(clusterRefs) > 0 {
 		if debug == true {
 			stdlog.Println("going inside clusters")
 		}
-		var clmo []mo.ClusterComputeResource
-		err = pc.Retrieve(ctx, clusterRefs, []string{"name", "configuration"}, &clmo)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		for _, cl := range clmo {
-			if debug == true {
-				stdlog.Println("---cluster name - you should see every cluster here---")
-				stdlog.Println(cl.Name)
-				stdlog.Println("You should see the cluster object, cluster configuration object, and cluster configuration dasvmconfig which should contain all VMs")
-				spew.Dump(cl)
-				spew.Dump(cl.Configuration)
-				spew.Dump(cl.Configuration.DasVmConfig)
-			}
 
-			for _, vm := range cl.Configuration.DasVmConfig {
-				if debug == true {
-					stdlog.Println("--VM ID - you should see every VM ID here--")
-					stdlog.Println(vm.Key.Value)
-				}
+	    // Step 1 : Get ObjectContents and Host info for VM
+	    //          The host is found under the runtime structure.
+	    
+	    // Step 2 : Step 2: Get the ManagedObjectReference from the Host we just got.
+	    
+	    // Step 3 : Get a list all the clusters that vCenter knows about, and for each one, also get the host
+	    
+	    // Step 4 : Loop through all clusters that exist (which we got in step 3), and loop through each host
+	    //          and see if that host matches the host we got in step 2 as the host of the vm.
+	    //          If we find it, return it, otherwise we return null.
 
-				vmToCluster[vm.Key] = cl.Name
-			}
-		}
+	    for _, vm := range vmmo {
+		    vmhost := vm.Summary.Runtime.Host	
+
+		    for _, cl := range clmo {
+		    	for _, host := range cl.Host {
+		    		hostToCluster[host] = cl.Name
+		    		
+		    		if *vmhost == host {
+		    			vmToCluster[vm.Self] = cl.Name
+		    		}
+		    	}
+		    }
+	    }
+
 	}
 
 	// Retrieve properties for the pools
@@ -377,6 +391,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	for _, host := range hsmo {
 		hostSummary[host.Self] = make(map[string]string)
 		hostSummary[host.Self]["name"] = host.Summary.Config.Name
+		hostSummary[host.Self]["cluster"] = hostToCluster[host.Self]
+
 		hostExtraMetrics[host.Self] = make(map[string]int64)
 		hostExtraMetrics[host.Self]["cpu_corecount_total"] = int64(host.Summary.Hardware.NumCpuThreads)
 	}
