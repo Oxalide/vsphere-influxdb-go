@@ -221,6 +221,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	}
 	objectTypes = append(objectTypes, "ClusterComputeResource")
 	objectTypes = append(objectTypes, "ResourcePool")
+	objectTypes = append(objectTypes, "Datastore")
 
 	// Loop trought datacenters and create the intersting object reference list
 	mors := []types.ManagedObjectReference{}
@@ -250,6 +251,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	hostRefs := []types.ManagedObjectReference{}
 	clusterRefs := []types.ManagedObjectReference{}
 	respoolRefs := []types.ManagedObjectReference{}
+	datastoreRefs := []types.ManagedObjectReference{}
 
 	newMors := []types.ManagedObjectReference{}
 
@@ -268,7 +270,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			clusterRefs = append(clusterRefs, mor)
 		} else if mor.Type == "ResourcePool" {
 			respoolRefs = append(respoolRefs, mor)
-		}
+		} else if mor.Type == "Datastore" {
+                        datastoreRefs = append(datastoreRefs, mor)
+                }
 	}
 	
 	// Copy the mors without the clusters
@@ -307,6 +311,14 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		return
 	}
 
+        // Retrieve summary property for all datastores
+        var dss []mo.Datastore
+        err = pc.Retrieve(ctx, datastoreRefs, []string{"summary"}, &dss)
+        if err != nil {
+                log.Fatal(err)
+		return
+        }
+        
 	// Initialize the map that will hold the VM MOR to ResourcePool reference
 	vmToPool := make(map[types.ManagedObjectReference]string)
 
@@ -639,6 +651,20 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 			bp.AddPoint(pt3)
 		}
+
+		for _, datastore := range dss {
+                        datastoreFields := map[string]interface{}{
+                                "capacity":    datastore.Summary.Capacity,
+                                "free_space": datastore.Summary.FreeSpace,
+                        }
+                        datastoreTags := map[string]string{"ds_name": datastore.Summary.Name}
+                        pt4, err := influxclient.NewPoint("datastore", datastoreTags, datastoreFields, time.Now())
+                        if err != nil {
+                                errlog.Println(err)
+                                continue
+                        }
+                        bp.AddPoint(pt4)
+                }
 
 	}
 

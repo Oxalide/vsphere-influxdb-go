@@ -64,6 +64,13 @@
 				{ "Metric": "disk.numberWriteAveraged.average", "Instances": "*" },
 				{ "Metric": "net.throughput.contention.summation", "Instances": "*" }
 			]
-		}
+		},
+		{
+                        "ObjectType": [ "Datastore" ],
+                        "Definition": [
+                                { "Metric": "disk.capacity.latest", "Instances": "*" },
+                                { "Metric": "disk.used.latest", "Instances": "*" }
+                        ]
+                }
 	]
 }
