@@ -271,8 +271,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		} else if mor.Type == "ResourcePool" {
 			respoolRefs = append(respoolRefs, mor)
 		} else if mor.Type == "Datastore" {
-                        datastoreRefs = append(datastoreRefs, mor)
-                }
+			datastoreRefs = append(datastoreRefs, mor)
+		}
 	}
 	
 	// Copy the mors without the clusters
