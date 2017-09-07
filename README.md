@@ -36,6 +36,10 @@ $GOBIN/vsphere-influxdb-go
 # Configure
 
 You'll need a JSON file with all your vCenters/ESXi to connect to, the InfluxDB connection details(url, username/password, database to use), and the metrics to collect.
+Additionally  you can provide a vCenter/ESXi server and InfluxDB connection details via environment variables, wich is extremly helpful when running inside a container.
+
+For InfluxDB set INFLUX\_HOSTNAME, INFLUX\_USERNAME, INFLUX\_PASSWORD and INFLUX\_DATABASE.
+For vSphere set VSPHERE\_HOSTNAME, VSPHERE\_USERNAME and VSPHERE\_PASSWORD and keep in mind, that currently only one vCenter/ESXi can be added via environment variable.
 
 If you set a domain, it will be automaticaly removed from the names of the found objects.
 
