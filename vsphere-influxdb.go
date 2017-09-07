@@ -271,10 +271,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		} else if mor.Type == "ResourcePool" {
 			respoolRefs = append(respoolRefs, mor)
 		} else if mor.Type == "Datastore" {
-                        datastoreRefs = append(datastoreRefs, mor)
-                }
+			datastoreRefs = append(datastoreRefs, mor)
+		}
 	}
-	
+
 	// Copy the mors without the clusters
 	mors = newMors
 	pc := property.DefaultCollector(client.Client)
@@ -294,7 +294,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		fmt.Println(err)
 		return
 	}
-	
+
 	//Retrieve properties for Cluster(s)
 	var clmo []mo.ClusterComputeResource
 	err = pc.Retrieve(ctx, clusterRefs, []string{"name", "configuration", "host"}, &clmo)
@@ -302,7 +302,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		fmt.Println(err)
 		return
 	}
-	
+
 	//Retrieve properties for ResourcePool
 	var rpmo []mo.ResourcePool
 	err = pc.Retrieve(ctx, respoolRefs, []string{"summary"}, &rpmo)
@@ -311,14 +311,14 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		return
 	}
 
-        // Retrieve summary property for all datastores
-        var dss []mo.Datastore
-        err = pc.Retrieve(ctx, datastoreRefs, []string{"summary"}, &dss)
-        if err != nil {
-                log.Fatal(err)
+	// Retrieve summary property for all datastores
+	var dss []mo.Datastore
+	err = pc.Retrieve(ctx, datastoreRefs, []string{"summary"}, &dss)
+	if err != nil {
+		log.Fatal(err)
 		return
-        }
-        
+	}
+
 	// Initialize the map that will hold the VM MOR to ResourcePool reference
 	vmToPool := make(map[types.ManagedObjectReference]string)
 
@@ -355,37 +355,37 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	// Initialize the map that will hold the VM MOR to cluster reference
 	hostToCluster := make(map[types.ManagedObjectReference]string)
-	
+
 	// Retrieve properties for clusters, if any
 	if len(clusterRefs) > 0 {
 		if debug == true {
 			stdlog.Println("going inside clusters")
 		}
 
-	    // Step 1 : Get ObjectContents and Host info for VM
-	    //          The host is found under the runtime structure.
-	    
-	    // Step 2 : Step 2: Get the ManagedObjectReference from the Host we just got.
-	    
-	    // Step 3 : Get a list all the clusters that vCenter knows about, and for each one, also get the host
-	    
-	    // Step 4 : Loop through all clusters that exist (which we got in step 3), and loop through each host
-	    //          and see if that host matches the host we got in step 2 as the host of the vm.
-	    //          If we find it, return it, otherwise we return null.
+		// Step 1 : Get ObjectContents and Host info for VM
+		//          The host is found under the runtime structure.
 
-	    for _, vm := range vmmo {
-		    vmhost := vm.Summary.Runtime.Host	
+		// Step 2 : Step 2: Get the ManagedObjectReference from the Host we just got.
 
-		    for _, cl := range clmo {
-		    	for _, host := range cl.Host {
-		    		hostToCluster[host] = cl.Name
-		    		
-		    		if *vmhost == host {
-		    			vmToCluster[vm.Self] = cl.Name
-		    		}
-		    	}
-		    }
-	    }
+		// Step 3 : Get a list all the clusters that vCenter knows about, and for each one, also get the host
+
+		// Step 4 : Loop through all clusters that exist (which we got in step 3), and loop through each host
+		//          and see if that host matches the host we got in step 2 as the host of the vm.
+		//          If we find it, return it, otherwise we return null.
+
+		for _, vm := range vmmo {
+			vmhost := vm.Summary.Runtime.Host
+
+			for _, cl := range clmo {
+				for _, host := range cl.Host {
+					hostToCluster[host] = cl.Name
+
+					if *vmhost == host {
+						vmToCluster[vm.Self] = cl.Name
+					}
+				}
+			}
+		}
 
 	}
 
@@ -653,18 +653,18 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		}
 
 		for _, datastore := range dss {
-                        datastoreFields := map[string]interface{}{
-                                "capacity":    datastore.Summary.Capacity,
-                                "free_space": datastore.Summary.FreeSpace,
-                        }
-                        datastoreTags := map[string]string{"ds_name": datastore.Summary.Name}
-                        pt4, err := influxclient.NewPoint("datastore", datastoreTags, datastoreFields, time.Now())
-                        if err != nil {
-                                errlog.Println(err)
-                                continue
-                        }
-                        bp.AddPoint(pt4)
-                }
+			datastoreFields := map[string]interface{}{
+				"capacity":   datastore.Summary.Capacity,
+				"free_space": datastore.Summary.FreeSpace,
+			}
+			datastoreTags := map[string]string{"ds_name": datastore.Summary.Name}
+			pt4, err := influxclient.NewPoint("datastore", datastoreTags, datastoreFields, time.Now())
+			if err != nil {
+				errlog.Println(err)
+				continue
+			}
+			bp.AddPoint(pt4)
+		}
 
 	}
 
@@ -761,6 +761,31 @@ func main() {
 	if err != nil {
 		errlog.Println("Could not decode configuration file", *cfgFile)
 		errlog.Fatalln(err)
+	}
+
+	// Support environemt variables / overrides for Influx Connection
+	if ihostname := os.Getenv("INFLUX_HOSTNAME"); ihostname != "" {
+		config.InfluxDB.Hostname = os.Getenv("INFLUX_HOSTNAME")
+		config.InfluxDB.Username = os.Getenv("INFLUX_USERNAME")
+		config.InfluxDB.Password = os.Getenv("INFLUX_PASSWORD")
+		config.InfluxDB.Database = os.Getenv("INFLUX_DATABASE")
+	}
+
+	// Support environment variables for VSphere
+	// Currently ony one server is supported and added to the list of vSphere servers
+	if vhostname := os.Getenv("VSPHERE_HOSTNAME"); vhostname != "" {
+		vc := VCenter{
+			Hostname: os.Getenv("VSPHERE_HOSTNAME"),
+			Username: os.Getenv("VSPHERE_USERNAME"),
+			Password: os.Getenv("VSPHERE_PASSWORD"),
+		}
+		config.VCenters = append(config.VCenters, &vc)
+	}
+
+	// Print configuration in debug mode
+	if debug == true {
+		stdlog.Println("---Configuration - you should see the config here---")
+		spew.Dump(config)
 	}
 
 	for _, vcenter := range config.VCenters {
