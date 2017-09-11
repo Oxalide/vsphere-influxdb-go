@@ -657,7 +657,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				"capacity":   datastore.Summary.Capacity,
 				"free_space": datastore.Summary.FreeSpace,
 			}
-			datastoreTags := map[string]string{"ds_name": datastore.Summary.Name}
+			datastoreTags := map[string]string{"ds_name": datastore.Summary.Name, "host": vcName}
 			pt4, err := influxclient.NewPoint("datastore", datastoreTags, datastoreFields, time.Now())
 			if err != nil {
 				errlog.Println(err)
