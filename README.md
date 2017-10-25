@@ -7,12 +7,7 @@
 * [govmomi](https://github.com/vmware/govmomi)
 * [influxDB go client](https://github.com/influxdata/influxdb/tree/master/client/v2)
 
-You'll need to go get them both for the script to work:
-```
-go get github.com/vmware/govmomi
-go get github.com/influxdata/influxdb/client/v2
-
-```
+Both are installed via go dep when go getting the project:
 
 # Run
 
