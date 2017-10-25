@@ -56,6 +56,9 @@ Create a crontab to run it every X minutes(one minute is fine - in our case, ~30
 * * * * * $HOME/work/go/bin/vsphere-influxdb-go
 ```
 
+# Example dashboards
+* https://grafana.com/dashboards/1299
+* https://grafana.com/dashboards/3556
 
 # TODO
 * Add service discovery(or probably something like [Viper](https://github.com/spf13/viper) for easier and more flexible configuration with multiple backends)
