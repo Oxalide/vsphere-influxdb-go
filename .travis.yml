@@ -1,10 +1,12 @@
 language: go
+install: true
 go:
   - 1.8
 env:
   - "PATH=/home/travis/gopath/bin:$PATH"
 before_install:
-  - go get github.com/mitchellh/gox
-after_success:
- - gox -output "dist/{{.OS}}_{{.Arch}}_{{.Dir}}"
+  -  go get github.com/mitchellh/gox
+script:
+  - go get -t ./...
+  - gox
 
