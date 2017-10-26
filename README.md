@@ -7,12 +7,7 @@
 * [govmomi](https://github.com/vmware/govmomi)
 * [influxDB go client](https://github.com/influxdata/influxdb/tree/master/client/v2)
 
-You'll need to go get them both for the script to work:
-```
-go get github.com/vmware/govmomi
-go get github.com/influxdata/influxdb/client/v2
-
-```
+Both are installed via go dep when go getting the project:
 
 # Run
 
@@ -61,6 +56,9 @@ Create a crontab to run it every X minutes(one minute is fine - in our case, ~30
 * * * * * $HOME/work/go/bin/vsphere-influxdb-go
 ```
 
+# Example dashboards
+* https://grafana.com/dashboards/1299
+* https://grafana.com/dashboards/3556
 
 # TODO
 * Add service discovery(or probably something like [Viper](https://github.com/spf13/viper) for easier and more flexible configuration with multiple backends)
