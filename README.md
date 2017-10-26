@@ -41,8 +41,8 @@ If you set a domain, it will be automaticaly removed from the names of the found
 Metrics collected are defined by associating ObjectType groups with Metric groups.
 To see all available metrics, check out [this](http://www.virten.net/2015/05/vsphere-6-0-performance-counter-description/) page. 
 
-Note: Not all metrics are available directly, you might need to change your metric collection level. 
-A table with the level needed for each metric is availble [here](http://www.virten.net/2015/05/which-performance-counters-are-available-in-each-statistic-level/), and you can find a PowerCLI script that changes the collect level [here](http://www.valcolabs.com/2012/02/06/modify-historical-statistics-level-using-powercli/)
+**Note: Not all metrics are available directly, you might need to change your metric collection level.**
+A table with the level needed for each metric is availble [here](http://www.virten.net/2015/05/which-performance-counters-are-available-in-each-statistic-level/), and you can find a pyVmomi script that cahanges to collect level in the [tools folder of the project](./tools/).
 
 An example of configuration file is [here](./vsphere-influxdb.json.sample).
 
@@ -57,8 +57,11 @@ Create a crontab to run it every X minutes(one minute is fine - in our case, ~30
 ```
 
 # Example dashboards
-* https://grafana.com/dashboards/1299
-* https://grafana.com/dashboards/3556
+* https://grafana.com/dashboards/1299 (thanks to @exbane )
+* https://grafana.com/dashboards/3556 (VMware cloud overview, mostly provisioning/global cloud usage stats)
+* https://grafana.com/dashboards/3571 (VMware performance, mostly VM oriented performance stats)
+
+Contributions welcome!
 
 # TODO
 * Add service discovery(or probably something like [Viper](https://github.com/spf13/viper) for easier and more flexible configuration with multiple backends)
