@@ -1,12 +1,22 @@
 language: go
-install: true
+sudo: required
 go:
-  - 1.8
+  - 1.9
 env:
-  - "PATH=/home/travis/gopath/bin:$PATH"
+  - PATH=/home/travis/gopath/bin:$PATH
 before_install:
-  -  go get github.com/mitchellh/gox
+  - sudo apt-get -qq update
+  - sudo apt-get install -y ruby ruby-dev build-essential rpm 
+  - go get -u github.com/golang/dep/cmd/dep
+  - go get -u github.com/alecthomas/gometalinter
+install:
+  - dep ensure
+before_script:
+  - gometalinter --install
+    #  - gometalinter --vendor ./...
 script:
-  - go get -t ./...
-  - gox
+  - git status
+after_success:
+  - gem install --no-ri --no-rdoc fpm
+  - test -n "$TRAVIS_TAG" && curl -sL https://git.io/goreleaser | bash
 

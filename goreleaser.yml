@@ -1,0 +1,47 @@
+project_name: vsphere-influxdb-go
+builds:
+  - binary: vsphere-influxdb-go
+    goos:
+      - windows
+      - darwin
+      - linux
+      - freebsd
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - 6
+      - 7
+
+archive:
+  format: tar.gz
+  files:
+    - LICENSE.txt
+    - README.md
+fpm:
+  # Your app's vendor.
+  # Default is empty.
+  vendor: Oxalide
+  # Your app's homepage.
+  homepage: https://github.com/Oxalide/vsphere-influxdb-go
+
+  # Your app's maintainer (probably you).
+  maintainer: Adrian Todorov <ato@oxalide.com>
+
+  # Your app's description.
+  description: Collect VMware vSphere, vCenter and ESXi performance metrics and send them to InfluxDB
+
+  # Your app's license.
+  license: GPL 3.0
+
+  # Formats to be generated.
+  formats:
+    - deb
+    - rpm
+  # Files or directories to add to your package (beyond the binary).
+  # Keys are source paths to get the files from.
+  # Values are the destination locations of the files in the package.
+  files:
+    "vsphere-influxdb.json.sample": "/etc/vsphere-influxdb-go.json"
+    
