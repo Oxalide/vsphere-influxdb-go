@@ -297,18 +297,22 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	//Retrieve properties for Cluster(s)
 	var clmo []mo.ClusterComputeResource
-	err = pc.Retrieve(ctx, clusterRefs, []string{"name", "configuration", "host"}, &clmo)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if len(clusterRefs) > 0 {
+		err = pc.Retrieve(ctx, clusterRefs, []string{"name", "configuration", "host"}, &clmo)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	//Retrieve properties for ResourcePool
 	var rpmo []mo.ResourcePool
-	err = pc.Retrieve(ctx, respoolRefs, []string{"summary"}, &rpmo)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if len(respoolRefs) > 0 {
+		err = pc.Retrieve(ctx, respoolRefs, []string{"summary"}, &rpmo)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	// Retrieve summary property for all datastores
@@ -322,12 +326,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	// Initialize the map that will hold the VM MOR to ResourcePool reference
 	vmToPool := make(map[types.ManagedObjectReference]string)
 
+	var respool []mo.ResourcePool
 	// Retrieve properties for ResourcePools
 	if len(respoolRefs) > 0 {
 		if debug == true {
 			stdlog.Println("going inside ResourcePools")
 		}
-		var respool []mo.ResourcePool
 		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
 		if err != nil {
 			fmt.Println(err)
@@ -631,12 +635,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 		}
 
-		var respool []mo.ResourcePool
-		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
-		if err != nil {
-			errlog.Println(err)
-			continue
-		}
+		//		var respool []mo.ResourcePool
+		//		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
+		//		if err != nil {
+		//			errlog.Println(err)
+		//			continue
+		//		}
 
 		for _, pool := range respool {
 			respoolFields := map[string]interface{}{
