@@ -68,6 +68,7 @@ type VCenter struct {
 	Username     string
 	Password     string
 	MetricGroups []*MetricGroup
+	client       *govmomi.Client
 }
 
 // MetricDef metric definition
@@ -101,8 +102,7 @@ var debug bool
 var stdlog, errlog *log.Logger
 
 // Connect to the actual vCenter connection used to query data
-func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
-	// Prepare vCenter Connections
+func (vcenter *VCenter) Connect() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -111,38 +111,49 @@ func (vcenter *VCenter) Connect() (*govmomi.Client, error) {
 	if err != nil {
 		errlog.Println("Could not parse vcenter url: ", vcenter.Hostname)
 		errlog.Println("Error: ", err)
-		return nil, err
+		return err
 	}
 
 	client, err := govmomi.NewClient(ctx, u, true)
 	if err != nil {
 		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
 		errlog.Println("Error: ", err)
-		return nil, err
+		return err
 	}
 
-	return client, nil
+	vcenter.client = client
+
+	return nil
 }
 
-// Init the VCenter connection
-func (vcenter *VCenter) Init(config Configuration) {
+// Disconnect from the vCenter
+func (vcenter *VCenter) Disconnect() error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client, err := vcenter.Connect()
-	if err != nil {
-		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
-		errlog.Println("Error: ", err)
-		return
+	if vcenter.client != nil {
+		if err := vcenter.client.Logout(ctx); err != nil {
+			errlog.Println("Could not disconnect properly from vcenter", vcenter.Hostname, err)
+			return err
+		}
 	}
-	defer client.Logout(ctx)
+
+	return nil
+}
+
+// Init the VCenter connection
+func (vcenter *VCenter) Init(config Configuration) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	client := vcenter.client
 
 	var perfmanager mo.PerformanceManager
-	err = client.RetrieveOne(ctx, *client.ServiceContent.PerfManager, nil, &perfmanager)
+	err := client.RetrieveOne(ctx, *client.ServiceContent.PerfManager, nil, &perfmanager)
 	if err != nil {
 		errlog.Println("Could not get performance manager")
 		errlog.Println("Error: ", err)
-		return
+		return err
 	}
 
 	for _, perf := range perfmanager.PerfCounter {
@@ -171,10 +182,11 @@ func (vcenter *VCenter) Init(config Configuration) {
 			}
 		}
 	}
+	return nil
 }
 
 // Query a vcenter
-func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.Client) {
+func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.Client, nowTime time.Time) {
 	stdlog.Println("Setting up query inventory of vcenter: ", vcenter.Hostname)
 
 	// Create the contect
@@ -182,17 +194,11 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	defer cancel()
 
 	// Get the client
-	client, err := vcenter.Connect()
-	if err != nil {
-		errlog.Println("Could not connect to vcenter: ", vcenter.Hostname)
-		errlog.Println("Error: ", err)
-		return
-	}
-	defer client.Logout(ctx)
+	client := vcenter.client
 
 	// Create the view manager
 	var viewManager mo.ViewManager
-	err = client.RetrieveOne(ctx, *client.ServiceContent.ViewManager, nil, &viewManager)
+	err := client.RetrieveOne(ctx, *client.ServiceContent.ViewManager, nil, &viewManager)
 	if err != nil {
 		errlog.Println("Could not get view manager from vcenter: " + vcenter.Hostname)
 		errlog.Println("Error: ", err)
@@ -255,7 +261,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	newMors := []types.ManagedObjectReference{}
 
-	if debug == true {
+	if debug {
 		spew.Dump(mors)
 	}
 	// Assign each MORS type to a specific array
@@ -279,20 +285,26 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	mors = newMors
 	pc := property.DefaultCollector(client.Client)
 
+	// govmomi segfaults when the list objects to retrieve is empty, so check everything
+
 	// Retrieve properties for all vms
 	var vmmo []mo.VirtualMachine
-	err = pc.Retrieve(ctx, vmRefs, []string{"summary"}, &vmmo)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if len(vmRefs) > 0 {
+		err = pc.Retrieve(ctx, vmRefs, []string{"summary"}, &vmmo)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	// Retrieve properties for hosts
 	var hsmo []mo.HostSystem
-	err = pc.Retrieve(ctx, hostRefs, []string{"parent", "summary"}, &hsmo)
-	if err != nil {
-		fmt.Println(err)
-		return
+	if len(hostRefs) > 0 {
+		err = pc.Retrieve(ctx, hostRefs, []string{"parent", "summary"}, &hsmo)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	//Retrieve properties for Cluster(s)
@@ -317,10 +329,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	// Retrieve summary property for all datastores
 	var dss []mo.Datastore
-	err = pc.Retrieve(ctx, datastoreRefs, []string{"summary"}, &dss)
-	if err != nil {
-		log.Fatal(err)
-		return
+	if len(datastoreRefs) > 0 {
+		err = pc.Retrieve(ctx, datastoreRefs, []string{"summary"}, &dss)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
 	}
 
 	// Initialize the map that will hold the VM MOR to ResourcePool reference
@@ -329,7 +343,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	var respool []mo.ResourcePool
 	// Retrieve properties for ResourcePools
 	if len(respoolRefs) > 0 {
-		if debug == true {
+		if debug {
 			stdlog.Println("going inside ResourcePools")
 		}
 		err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
@@ -340,12 +354,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		for _, pool := range respool {
 			stdlog.Println(pool.Config.MemoryAllocation.GetResourceAllocationInfo().Limit)
 			stdlog.Println(pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit)
-			if debug == true {
+			if debug {
 				stdlog.Println("---resourcepool name - you should see every resourcepool here (+VMs inside)----")
 				stdlog.Println(pool.Name)
 			}
 			for _, vm := range pool.Vm {
-				if debug == true {
+				if debug {
 					stdlog.Println("--VM ID - you should see every VM ID here--")
 					stdlog.Println(vm)
 				}
@@ -357,12 +371,12 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	// Initialize the map that will hold the VM MOR to cluster reference
 	vmToCluster := make(map[types.ManagedObjectReference]string)
 
-	// Initialize the map that will hold the VM MOR to cluster reference
+	// Initialize the map that will hold the host MOR to cluster reference
 	hostToCluster := make(map[types.ManagedObjectReference]string)
 
 	// Retrieve properties for clusters, if any
 	if len(clusterRefs) > 0 {
-		if debug == true {
+		if debug {
 			stdlog.Println("going inside clusters")
 		}
 
@@ -746,15 +760,38 @@ func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxcl
 	vcenter.Query(config, InfluxDBClient)
 }
 
-func main() {
-	flag.BoolVar(&debug, "debug", false, "Debug mode")
-	var cfgFile = flag.String("config", "/etc/"+path.Base(os.Args[0])+".json", "Config file to use. Default is /etc/"+path.Base(os.Args[0])+".json")
-	flag.Parse()
+func worker(id int, config Configuration, influxDBClient influxclient.Client, nowTime time.Time, vcenters <-chan *VCenter, results chan<- bool) {
+	for vcenter := range vcenters {
+		if debug {
+			stdlog.Println("Worker", id, "received vcenter", vcenter.Hostname)
+		}
 
+		if err := vcenter.Connect(); err != nil {
+			errlog.Println("Could not initialize connection to vcenter", vcenter.Hostname, err)
+			results <- true
+			continue
+		}
+
+		if err := vcenter.Init(config); err == nil {
+			vcenter.Query(config, influxDBClient, nowTime)
+		}
+
+		vcenter.Disconnect()
+		results <- true
+	}
+}
+
+func main() {
+	baseName := path.Base(os.Args[0])
 	stdlog = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	errlog = log.New(os.Stderr, "", log.Ldate|log.Ltime)
 
-	stdlog.Println("Starting :", path.Base(os.Args[0]))
+	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	workerCount := flag.Int("workers", 4, "Number of concurrent workers to query vcenters")
+	cfgFile := flag.String("config", "/etc/"+baseName+".json", "Config file to use. Default is /etc/"+baseName+".json")
+	flag.Parse()
+
+	stdlog.Println("Starting", baseName, "with config file", *cfgFile)
 
 	// read the configuration
 	file, err := os.Open(*cfgFile)
@@ -791,28 +828,48 @@ func main() {
 	}
 
 	// Print configuration in debug mode
-	if debug == true {
+	if debug {
 		stdlog.Println("---Configuration - you should see the config here---")
 		spew.Dump(config)
 	}
 
-	for _, vcenter := range config.VCenters {
-		vcenter.Init(config)
-	}
-
+	// Initialize InfluxDB and connect to database
 	InfluxDBClient, err := influxclient.NewHTTPClient(influxclient.HTTPConfig{
 		Addr:     config.InfluxDB.Hostname,
 		Username: config.InfluxDB.Username,
 		Password: config.InfluxDB.Password,
 	})
 	if err != nil {
+		errlog.Println("Could not initialize InfluxDB client")
+		errlog.Fatalln(err)
+	}
+
+	if _, _, err := InfluxDBClient.Ping(0); err != nil {
 		errlog.Println("Could not connect to InfluxDB")
 		errlog.Fatalln(err)
 	}
 
+	defer InfluxDBClient.Close()
+
 	stdlog.Println("Successfully connected to Influx")
 
-	for _, vcenter := range config.VCenters {
-		queryVCenter(*vcenter, config, InfluxDBClient)
+	// make the channels, get the time, launch the goroutines
+	vcenterCount := len(config.VCenters)
+	vcenters := make(chan *VCenter, vcenterCount)
+	results := make(chan bool, vcenterCount)
+	nowTime := time.Now()
+
+	for i := 0; i < *workerCount; i++ {
+		go worker(i, config, InfluxDBClient, nowTime, vcenters, results)
 	}
+
+	for _, vcenter := range config.VCenters {
+		vcenters <- vcenter
+	}
+	close(vcenters)
+
+	for i := 0; i < vcenterCount; i++ {
+		<-results
+	}
+
 }
