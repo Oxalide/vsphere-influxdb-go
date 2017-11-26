@@ -378,6 +378,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		//          If we find it, return it, otherwise we return null.
 
 		for _, vm := range vmmo {
+			// check if VM is a clone in progress and skip it
+			if vm.Summary.Runtime.Host == nil {
+				continue
+			}
 			vmhost := vm.Summary.Runtime.Host
 
 			for _, cl := range clmo {
