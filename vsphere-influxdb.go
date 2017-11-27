@@ -755,11 +755,6 @@ func average(n ...int64) int64 {
 	return int64(math.Floor(favg + .5))
 }
 
-func queryVCenter(vcenter VCenter, config Configuration, InfluxDBClient influxclient.Client) {
-	stdlog.Println("Querying vcenter")
-	vcenter.Query(config, InfluxDBClient)
-}
-
 func worker(id int, config Configuration, influxDBClient influxclient.Client, nowTime time.Time, vcenters <-chan *VCenter, results chan<- bool) {
 	for vcenter := range vcenters {
 		if debug {
