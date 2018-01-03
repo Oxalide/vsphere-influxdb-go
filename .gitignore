@@ -1,13 +1,1 @@
-### Basic ignore file
-
-# Binaries for programs and plugins
-vsphere-influxdb
-
-# Test binary, build with `go test -c`
-*.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
-*.out
-
-# Configuration file
-vsphere-influxdb.json
+*.swp
