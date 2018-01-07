@@ -99,8 +99,10 @@ type EntityQuery struct {
 	Metrics []int32
 }
 
-var debug, test bool
+var getversion, debug, test bool
 var stdlog, errlog *log.Logger
+var version = "master"
+
 
 // Connect to the actual vCenter connection used to query data
 func (vcenter *VCenter) Connect() error {
@@ -805,9 +807,15 @@ func main() {
 
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
 	flag.BoolVar(&test, "test", false, "Test mode, data will be collected from vCenters, but nothing will be written to InfluxDB, only printed to stdout")
+	flag.BoolVar(&getversion, "version", false, "Get version and exit")
 	workerCount := flag.Int("workers", 4, "Number of concurrent workers to query vcenters")
 	cfgFile := flag.String("config", "/etc/"+baseName+".json", "Config file to use")
 	flag.Parse()
+
+	if getversion {
+		stdlong.Println("Version:",version)
+		os.Exit(0)
+	}
 
 	stdlog.Println("Starting", baseName, "with config file", *cfgFile)
 
