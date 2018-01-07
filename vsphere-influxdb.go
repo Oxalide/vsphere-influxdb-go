@@ -813,7 +813,7 @@ func main() {
 	flag.Parse()
 
 	if getversion {
-		stdlong.Println("Version:",version)
+		stdlog.Println("Version:",version)
 		os.Exit(0)
 	}
 
