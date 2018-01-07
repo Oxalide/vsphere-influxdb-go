@@ -99,7 +99,7 @@ type EntityQuery struct {
 	Metrics []int32
 }
 
-var debug bool
+var debug, test bool
 var stdlog, errlog *log.Logger
 
 // Connect to the actual vCenter connection used to query data
@@ -419,24 +419,30 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		respoolSummary[pools.Self]["name"] = pools.Summary.GetResourcePoolSummary().Name
 	}
 
-	// Retrieve properties for the hosts
+	// Initialize the maps that will hold the extra tags and metrics for VMs
 	hostSummary := make(map[types.ManagedObjectReference]map[string]string)
 	hostExtraMetrics := make(map[types.ManagedObjectReference]map[string]int64)
 
 	for _, host := range hsmo {
+
+		// Extra tags per host
 		hostSummary[host.Self] = make(map[string]string)
 		hostSummary[host.Self]["name"] = host.Summary.Config.Name
 		hostSummary[host.Self]["cluster"] = hostToCluster[host.Self]
 
+		// Extra metrics per host
 		hostExtraMetrics[host.Self] = make(map[string]int64)
+		hostExtraMetrics[host.Self]["uptime"] = int64(host.Summary.QuickStats.Uptime)
 		hostExtraMetrics[host.Self]["cpu_corecount_total"] = int64(host.Summary.Hardware.NumCpuThreads)
 	}
 
-	// Initialize the map that will hold all extra tags
+	// Initialize the maps that will hold the extra tags and metrics for VMs
 	vmSummary := make(map[types.ManagedObjectReference]map[string]string)
+	vmExtraMetrics := make(map[types.ManagedObjectReference]map[string]int64)
 
 	// Assign extra details per VM in vmSummary
 	for _, vm := range vmmo {
+		// extra tags per VM
 		vmSummary[vm.Self] = make(map[string]string)
 		// Ugly way to extract datastore value
 		re, err := regexp.Compile(`\[(.*?)\]`)
@@ -453,6 +459,10 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		if vm.Summary.Runtime.Host != nil {
 			vmSummary[vm.Self]["esx"] = hostSummary[*vm.Summary.Runtime.Host]["name"]
 		}
+
+		// Extra metrics per VM
+		vmExtraMetrics[vm.Self] = make(map[string]int64)
+		vmExtraMetrics[vm.Self]["uptime"] = int64(vm.Summary.QuickStats.UptimeSeconds)
 	}
 
 	// get object names
@@ -628,8 +638,14 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 				specialTags[measurementName][tags["name"]][instanceName]["instance"] = instanceName
 			}
 		}
-
+		// Create the fields for the hostExtraMetrics
 		if metrics, ok := hostExtraMetrics[pem.Entity]; ok {
+			for key, value := range metrics {
+				fields[key] = value
+			}
+		}
+		// Create the fields for the vmExtraMetrics
+		if metrics, ok := vmExtraMetrics[pem.Entity]; ok {
 			for key, value := range metrics {
 				fields[key] = value
 			}
@@ -693,14 +709,17 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 	}
 
-	//InfluxDB send
-	err = InfluxDBClient.Write(bp)
-	if err != nil {
-		errlog.Println(err)
-		return
+	//InfluxDB send if not in test mode
+	if test != true {
+		err = InfluxDBClient.Write(bp)
+		if err != nil {
+			errlog.Println(err)
+			return
+		}
+		stdlog.Println("Sent data to Influxdb from:", vcenter.Hostname)
+	} else {
+		spew.Dump(bp)
 	}
-
-	stdlog.Println("Sent data to Influxdb from:", vcenter.Hostname)
 }
 
 func min(n ...int64) int64 {
@@ -785,6 +804,7 @@ func main() {
 	errlog = log.New(os.Stderr, "", log.Ldate|log.Ltime)
 
 	flag.BoolVar(&debug, "debug", false, "Debug mode")
+	flag.BoolVar(&test, "test", false, "Test mode, data will be collected from vCenters, but nothing will be written to InfluxDB, only printed to stdout")
 	workerCount := flag.Int("workers", 4, "Number of concurrent workers to query vcenters")
 	cfgFile := flag.String("config", "/etc/"+baseName+".json", "Config file to use")
 	flag.Parse()
