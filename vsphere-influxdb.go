@@ -833,10 +833,6 @@ func main() {
 		config.InfluxDB.Password = os.Getenv("INFLUX_PASSWORD")
 		config.InfluxDB.Database = os.Getenv("INFLUX_DATABASE")
 	}
-	// Add a default "" value for InfluxDB prefix for retrocompatibility post PR #53
-	if config.InfluxDB.Prefix == nil {
-		config.InfluxDB.Prefix = ""
-	}
 	// Support environment variables for VSphere
 	// Currently ony one server is supported and added to the list of vSphere servers
 	if vhostname := os.Getenv("VSPHERE_HOSTNAME"); vhostname != "" {
