@@ -103,7 +103,6 @@ var getversion, debug, test bool
 var stdlog, errlog *log.Logger
 var version = "master"
 
-
 // Connect to the actual vCenter connection used to query data
 func (vcenter *VCenter) Connect() error {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -377,6 +376,9 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	// Initialize the map that will hold the host MOR to cluster reference
 	hostToCluster := make(map[types.ManagedObjectReference]string)
 
+	// Initialize the map that will hold the vDisk UUID per VM MOR to datastore reference
+	vDiskToDatastore := make(map[types.ManagedObjectReference]map[string]string)
+
 	// Retrieve properties for clusters, if any
 	if len(clusterRefs) > 0 {
 		if debug {
@@ -452,6 +454,18 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			fmt.Println(err)
 		}
 		vmSummary[vm.Self]["datastore"] = strings.Replace(strings.Replace(re.FindString(fmt.Sprintln(vm.Summary.Config)), "[", "", -1), "]", "", -1)
+
+		// List all devices to get vDisks
+		for _, device := range vm.Config.Hardware.Device {
+			// Hacky way to check if it's a vDisk and if it's datastore is different than the main one for VM
+			if device.Backing.FileName != nil && device.Backing.Datastore.Name != vmSummary[vm.Self]["datastore"] {
+				if vDiskToDatastore[vm.Self] == nil {
+					vDiskToDatastore[vm.Self] = make(map[string]string)
+				}
+				vDiskToDatastore[vm.Self][device.diskObjectId] = device.Backing.Datastore.Name
+			}
+		}
+
 		if vmToCluster[vm.Self] != "" {
 			vmSummary[vm.Self]["cluster"] = vmToCluster[vm.Self]
 		}
@@ -813,7 +827,7 @@ func main() {
 	flag.Parse()
 
 	if getversion {
-		stdlog.Println("Version:",version)
+		fmt.Println("Version:", version)
 		os.Exit(0)
 	}
 
