@@ -701,13 +701,6 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			}
 		}
 
-		//    var respool []mo.ResourcePool
-		//    err = pc.Retrieve(ctx, respoolRefs, []string{"name", "config", "vm"}, &respool)
-		//    if err != nil {
-		//      errlog.Println(err)
-		//      continue
-		//    }
-
 		for _, pool := range respool {
 			respoolFields := map[string]interface{}{
 				"cpu_limit":    pool.Config.CpuAllocation.GetResourceAllocationInfo().Limit,
