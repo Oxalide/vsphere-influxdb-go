@@ -150,6 +150,13 @@ func (vcenter *VCenter) Init(config Configuration) error {
 
 	client := vcenter.client
 
+	// Print version
+	if debug {
+		aboutInfo := client.Client.ServiceContent.About
+		stdlog.Println("Version:", aboutInfo.FullName)
+	}
+
+
 	var perfmanager mo.PerformanceManager
 	err := client.RetrieveOne(ctx, *client.ServiceContent.PerfManager, nil, &perfmanager)
 	if err != nil {
@@ -753,7 +760,6 @@ func min(n ...int64) int64 {
 	}
 	return min
 }
-
 func max(n ...int64) int64 {
 	var max int64 = -1
 	for _, i := range n {
@@ -804,7 +810,6 @@ func worker(id int, config Configuration, influxDBClient influxclient.Client, no
 			results <- true
 			continue
 		}
-
 		if err := vcenter.Init(config); err == nil {
 			vcenter.Query(config, influxDBClient, nowTime)
 		}
