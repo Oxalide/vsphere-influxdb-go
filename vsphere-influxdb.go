@@ -165,6 +165,12 @@ func (vcenter *VCenter) Init(config Configuration) error {
 		return err
 	}
 
+	// Print PerformanceManager interval collection level
+	if debug {
+		stdlog.Println("PerformanceManager interval collection level")
+		spew.Dump(perfmanager.HistoricalInterval)
+	}
+
 	for _, perf := range perfmanager.PerfCounter {
 		groupinfo := perf.GroupInfo.GetElementDescription()
 		nameinfo := perf.NameInfo.GetElementDescription()
@@ -186,7 +192,7 @@ func (vcenter *VCenter) Init(config Configuration) error {
 							metricgroup := MetricGroup{ObjectType: mtype, Metrics: []MetricDef{metricd}}
 							vcenter.MetricGroups = append(vcenter.MetricGroups, &metricgroup)
 						}
-					}
+									}
 				}
 			}
 		}
