@@ -49,7 +49,7 @@ For InfluxDB:
 For vSphere:
 * VSPHERE\_HOSTNAME
 * VSPHERE\_USERNAME
-* SPHERE\_PASSWORD 
+* VSPHERE\_PASSWORD 
 
 Keep in mind, that currently only one vCenter/ESXi can be added via environment variable.
 
