@@ -1,4 +1,4 @@
-/*  Copyright 2016 Adrian Todorov, Oxalide ato@oxalide.com
+/*  Copyright 2016-2018 Adrian Todorov, Oxalide ato@oxalide.com
 Original project author: https://github.com/cblomart
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
