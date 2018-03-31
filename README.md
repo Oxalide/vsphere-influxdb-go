@@ -57,6 +57,7 @@ If you set a domain, it will be automaticaly removed from the names of the found
 
 Metrics collected are defined by associating ObjectType groups with Metric groups.
 
+There have been reports of the script not working correctly when the time is incorrect on the vsphere or vcenter. Make sure that the time is valid or activate the NTP service on the machine.
 
 # Run as a service
 
