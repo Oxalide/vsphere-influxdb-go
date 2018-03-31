@@ -156,7 +156,6 @@ func (vcenter *VCenter) Init(config Configuration) error {
 		stdlog.Println("Version:", aboutInfo.FullName)
 	}
 
-
 	var perfmanager mo.PerformanceManager
 	err := client.RetrieveOne(ctx, *client.ServiceContent.PerfManager, nil, &perfmanager)
 	if err != nil {
@@ -192,7 +191,7 @@ func (vcenter *VCenter) Init(config Configuration) error {
 							metricgroup := MetricGroup{ObjectType: mtype, Metrics: []MetricDef{metricd}}
 							vcenter.MetricGroups = append(vcenter.MetricGroups, &metricgroup)
 						}
-									}
+					}
 				}
 			}
 		}
@@ -493,7 +492,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		vmExtraMetrics[vm.Self] = make(map[string]int64)
 		vmExtraMetrics[vm.Self]["uptime"] = int64(vm.Summary.QuickStats.UptimeSeconds)
 	}
-
+	fmt.Println("vDiskDatastore:")
+	spew.Dump(vDiskToDatastore)
 	// get object names
 	objects := []mo.ManagedEntity{}
 
