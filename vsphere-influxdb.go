@@ -51,6 +51,7 @@ type Configuration struct {
 	Metrics  []Metric
 	Interval int
 	Domain   string
+	RemoveHostDomainName bool
 	InfluxDB InfluxDB
 }
 
@@ -99,7 +100,7 @@ type EntityQuery struct {
 	Metrics []int32
 }
 
-var getversion, debug, test, RemoveHostDomainName bool
+var getversion, debug, test bool
 var stdlog, errlog *log.Logger
 var version = "master"
 
@@ -445,7 +446,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		hostSummary[host.Self] = make(map[string]string)
 		hostSummary[host.Self]["name"] = hostSummary[host.Self]["name"] = host.Summary.Config.Name
 		// Remove Domain Name from Host
-		if RemoveHostDomainName {
+		if config.RemoveHostDomainName {
 			hostSummary[host.Self]["name"] = strings.Replace(host.Summary.Config.Name, config.Domain, "", -1)
 		}
 		hostSummary[host.Self]["cluster"] = hostToCluster[host.Self]
