@@ -719,6 +719,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			datastoreFields := map[string]interface{}{
 				"capacity":   datastore.Summary.Capacity,
 				"free_space": datastore.Summary.FreeSpace,
+				"usage":      1.0 - (float64(datastore.Summary.FreeSpace)/float64(datastore.Summary.Capacity)),
 			}
 			datastoreTags := map[string]string{"ds_name": datastore.Summary.Name, "host": vcName}
 			pt4, err := influxclient.NewPoint(config.InfluxDB.Prefix+"datastore", datastoreTags, datastoreFields, time.Now())
