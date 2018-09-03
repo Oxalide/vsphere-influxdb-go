@@ -51,6 +51,7 @@ type Configuration struct {
 	Metrics  []Metric
 	Interval int
 	Domain   string
+	RemoveHostDomainName bool
 	InfluxDB InfluxDB
 }
 
@@ -443,7 +444,11 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 
 		// Extra tags per host
 		hostSummary[host.Self] = make(map[string]string)
-		hostSummary[host.Self]["name"] = host.Summary.Config.Name
+		hostSummary[host.Self]["name"] = hostSummary[host.Self]["name"] = host.Summary.Config.Name
+		// Remove Domain Name from Host
+		if config.RemoveHostDomainName {
+			hostSummary[host.Self]["name"] = strings.Replace(host.Summary.Config.Name, config.Domain, "", -1)
+		}
 		hostSummary[host.Self]["cluster"] = hostToCluster[host.Self]
 
 		// Extra metrics per host
