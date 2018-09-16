@@ -47,12 +47,12 @@ const (
 
 // Configuration is used to store config data
 type Configuration struct {
-	VCenters []*VCenter
-	Metrics  []Metric
-	Interval int
-	Domain   string
+	VCenters             []*VCenter
+	Metrics              []Metric
+	Interval             int
+	Domain               string
 	RemoveHostDomainName bool
-	InfluxDB InfluxDB
+	InfluxDB             InfluxDB
 }
 
 // InfluxDB is used for InfluxDB connections
@@ -390,7 +390,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 	hostToCluster := make(map[types.ManagedObjectReference]string)
 
 	// Initialize the map that will hold the vDisk UUID per VM MOR to datastore reference
-	vDiskToDatastore := make(map[types.ManagedObjectReference]map[string]string)
+	//	vDiskToDatastore := make(map[types.ManagedObjectReference]map[string]string)
 
 	// Retrieve properties for clusters, if any
 	if len(clusterRefs) > 0 {
@@ -473,15 +473,15 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		vmSummary[vm.Self]["datastore"] = strings.Replace(strings.Replace(re.FindString(fmt.Sprintln(vm.Summary.Config)), "[", "", -1), "]", "", -1)
 
 		// List all devices to get vDisks
-		for _, device := range vm.Config.Hardware.Device {
-			// Hacky way to check if it's a vDisk and if it's datastore is different than the main one for VM
-			if device.Backing.FileName != nil && device.Backing.Datastore.Name != vmSummary[vm.Self]["datastore"] {
-				if vDiskToDatastore[vm.Self] == nil {
-					vDiskToDatastore[vm.Self] = make(map[string]string)
-				}
-				vDiskToDatastore[vm.Self][device.diskObjectId] = device.Backing.Datastore.Name
-			}
-		}
+		//		for _, device := range vm.Config.Hardware.Device {
+		//			// Hacky way to check if it's a vDisk and if it's datastore is different than the main one for VM
+		//			if device.Backing.FileName != nil && device.Backing.Datastore.Name != vmSummary[vm.Self]["datastore"] {
+		//				if vDiskToDatastore[vm.Self] == nil {
+		//					vDiskToDatastore[vm.Self] = make(map[string]string)
+		//				}
+		//				vDiskToDatastore[vm.Self][device.diskObjectId] = device.Backing.Datastore.Name
+		//			}
+		//		}
 
 		if vmToCluster[vm.Self] != "" {
 			vmSummary[vm.Self]["cluster"] = vmToCluster[vm.Self]
@@ -497,8 +497,8 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 		vmExtraMetrics[vm.Self] = make(map[string]int64)
 		vmExtraMetrics[vm.Self]["uptime"] = int64(vm.Summary.QuickStats.UptimeSeconds)
 	}
-	fmt.Println("vDiskDatastore:")
-	spew.Dump(vDiskToDatastore)
+	//	fmt.Println("vDiskDatastore:")
+	//	spew.Dump(vDiskToDatastore)
 	// get object names
 	objects := []mo.ManagedEntity{}
 
@@ -724,7 +724,7 @@ func (vcenter *VCenter) Query(config Configuration, InfluxDBClient influxclient.
 			datastoreFields := map[string]interface{}{
 				"capacity":   datastore.Summary.Capacity,
 				"free_space": datastore.Summary.FreeSpace,
-				"usage":      1.0 - (float64(datastore.Summary.FreeSpace)/float64(datastore.Summary.Capacity)),
+				"usage":      1.0 - (float64(datastore.Summary.FreeSpace) / float64(datastore.Summary.Capacity)),
 			}
 			datastoreTags := map[string]string{"ds_name": datastore.Summary.Name, "host": vcName}
 			pt4, err := influxclient.NewPoint(config.InfluxDB.Prefix+"datastore", datastoreTags, datastoreFields, time.Now())

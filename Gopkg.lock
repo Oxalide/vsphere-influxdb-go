@@ -2,32 +2,65 @@
 
 
 [[projects]]
+  digest = "1:56c130d885a4aacae1dd9c7b71cfe39912c7ebc1ff7d2b46083c8812996dc43b"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = ""
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:ec837623c12abf4f44837163ad32274dd0c9dfa29f0d65068c60897bce34bb75"
   name = "github.com/influxdata/influxdb"
-  packages = ["client/v2","models","pkg/escape"]
+  packages = [
+    "client/v2",
+    "models",
+    "pkg/escape",
+  ]
+  pruneopts = ""
   revision = "a7c3d3c0f7b74f71919047adbc4933460967a576"
   version = "v1.3.6"
 
 [[projects]]
+  digest = "1:c5342f3ddefc1644d1a3ed028e739bfabe5b457978084b9a28d42ed235c8bb4d"
   name = "github.com/vmware/govmomi"
-  packages = [".","property","session","vim25","vim25/debug","vim25/methods","vim25/mo","vim25/progress","vim25/soap","vim25/types","vim25/xml"]
+  packages = [
+    ".",
+    "property",
+    "session",
+    "vim25",
+    "vim25/debug",
+    "vim25/methods",
+    "vim25/mo",
+    "vim25/progress",
+    "vim25/soap",
+    "vim25/types",
+    "vim25/xml",
+  ]
+  pruneopts = ""
   revision = "b63044e5f833781eb7b305bc035392480ee06a82"
   version = "v0.15.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:70ca15641aa31be55859a7f75ddef3ae384ae18068deab8274668a1a77d1e84a"
   name = "golang.org/x/net"
   packages = ["context"]
+  pruneopts = ""
   revision = "4b14673ba32bee7f5ac0f990a48f033919fd418b"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0b7718e6a338978c4ea1efca3255565c667967ddd6ff68999a1d1cea5112209e"
+  input-imports = [
+    "github.com/davecgh/go-spew/spew",
+    "github.com/influxdata/influxdb/client/v2",
+    "github.com/vmware/govmomi",
+    "github.com/vmware/govmomi/property",
+    "github.com/vmware/govmomi/vim25/methods",
+    "github.com/vmware/govmomi/vim25/mo",
+    "github.com/vmware/govmomi/vim25/types",
+    "golang.org/x/net/context",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
