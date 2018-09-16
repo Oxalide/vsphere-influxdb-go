@@ -19,7 +19,7 @@ archive:
   files:
     - LICENSE.txt
     - README.md
-fpm:
+nfpm:
   # Your app's vendor.
   # Default is empty.
   vendor: Oxalide

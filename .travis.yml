@@ -17,6 +17,6 @@ before_script:
 script:
   - git status
 after_success:
-  - gem install --no-ri --no-rdoc fpm
+#  - gem install --no-ri --no-rdoc fpm
   - test -n "$TRAVIS_TAG" && curl -sL https://git.io/goreleaser | bash
 
