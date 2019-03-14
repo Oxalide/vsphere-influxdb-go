@@ -1,5 +1,6 @@
 {
   "Domain": ".lab",
+  "RemoveHostDomainName": false,
   "Interval": 60,
   "VCenters": [
     { "Username": "monitoring", "Password": "monixx", "Hostname": "vcenter-01.dc-01.lab" },
