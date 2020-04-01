@@ -110,7 +110,8 @@ func (vcenter *VCenter) Connect() error {
 	defer cancel()
 
 	stdlog.Println("Connecting to vcenter:", vcenter.Hostname)
-	u, err := url.Parse("https://" + vcenter.Username + ":" + vcenter.Password + "@" + vcenter.Hostname + "/sdk")
+	u, err := url.Parse("https://" + vcenter.Hostname + "/sdk")
+	u.User = url.UserPassword(vcenter.Username, vcenter.Password)
 	if err != nil {
 		errlog.Println("Could not parse vcenter url:", vcenter.Hostname)
 		errlog.Println("Error:", err)
