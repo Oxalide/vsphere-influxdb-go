@@ -36,7 +36,7 @@ This will install vsphere-influxdb-go in /usr/local/bin/vsphere-influxdb-go and 
 The JSON configuration file in /etc/vsphere-influxdb-go.json contains all your vCenters/ESXi to connect to, the InfluxDB connection details(url, username/password, database to use), and the metrics to collect(full list [here](http://www.virten.net/2015/05/vsphere-6-0-performance-counter-description/) ).
 
 **Note: Not all metrics are available directly, you might need to change your metric collection level.**
-A table with the level needed for each metric is availble [here](http://www.virten.net/2015/05/which-performance-counters-are-available-in-each-statistic-level/), and you can find a python script to change the collect level in the [tools folder of the project](./tools/).
+A table with the level needed for each metric is available [here](http://www.virten.net/2015/05/which-performance-counters-are-available-in-each-statistic-level/), and you can find a python script to change the collect level in the [tools folder of the project](./tools/).
 
 Additionally  you can provide a vCenter/ESXi server and InfluxDB connection details via environment variables, wich is extremly helpful when running inside a container:
 
